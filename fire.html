@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAKESH GAS SUPPLIERS</title>
+    <link rel="stylesheet" href="fire.css">
+</head>
+<body>
+
+<div class="container">
+
+    <div class="logo-title">
+        <h1>RAKESH GAS SUPPLIERS</h1>
+        <p>Fire Extinguisher Service Management System</p>
+    </div>
+
+    <form id="customerForm" action="save.php" method="POST" onsubmit="confirmCertificateNo()">
+
+        <div class="form-grid">
+
+            <div class="form-group">
+                <label>Customer Name <span class="required">*</span></label>
+                <input type="text" name="customer_name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Mobile Number<span class="required">*</span></label>
+                <input type="tel" name="mobile" placeholder="Enter 10 Digit no." pattern="[0-9]{10}" maxlength="10" required title="please eneter a valid 10 digit no.">
+            </div>
+            
+            <div class="form-group full-width">
+                <label>Address<span class="required">*</span></label>
+                <textarea name="address" rows="2" required></textarea>
+            </div>
+            
+            <!-- Exact Original Order Maintained -->
+            <div class="form-group">
+                <label>Certificate Number<span class="required">*</span></label>
+                <input type="text" id="certificate_no" name="certificate_no" required style="background-color: #f1f3f5; font-weight: bold; color: #495057;">
+            </div>
+            
+            <div class="form-group">
+                <label>Issue Date<span class="required">*</span></label>
+                <input type="date" id="service_date" name="service_date" required onchange="fetchDynamicCertificateNo(this.value)">
+            </div>
+            
+            <div class="form-group">
+                <label>Validity Duration<span class="required">*</span></label>
+                <select id="expiry_duration" name="expiry_duration">
+                    <option value="12">1 Year (Standard)</option>
+                    <option value="6">6 Months</option>
+                    <option value="24">2 Years</option>
+                    <option value="36">3 Years</option>
+                    <option value="60">5 Years</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Expiry Date<span class="required">*</span></label>
+                <input type="text" id="expiry_date" name="expiry_date" placeholder="MM/DD/YYYY" readonly required>
+            </div>
+
+            <div class="form-group full-width">
+                <h3>Extinguisher Details<span class="required">*</span></h3>
+
+                <table id="extinguisherTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Capacity</th>
+                            <th>Qty</th>
+                            <th>Service Type</th> 
+                            <th>Amount </th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <select name="ext_type[]" onchange="updateCapacity(this)" required>
+                                    <option value="">Select Type</option>
+                                    <option value="ABC">ABC Powder</option>
+                                    <option value="CO2">CO2</option>
+                                    <option value="Water">Water</option>
+                                    <option value="Foam">Foam</option>
+                                </select>
+                            </td>
+
+                            <td>
+                                <select name="ext_capacity[]" class="capacity" required>
+                                    <option value="">Select Capacity</option>
+                                </select>
+                            </td>
+
+                            <td>
+                                <input type="number" name="ext_qty[]" class="ext-qty" value="1" min="1" oninput="calculateTotalQty()" required>
+                            </td>
+                            
+                            <td>
+                                <select name="service_action_type[]" class="form-control service-toggle" onchange="togglePriceFields(this)">
+                                    <option value="refilling">Refilling Only</option>
+                                    <option value="new">New Bottle/Sale</option>
+                                </select>
+                            </td>
+                            
+                            <td>
+                                <input type="number" name="ext_refilling_price[]" class="form-control ref-input" placeholder="Refill Rate" min="0" step="0.01">
+                                <input type="number" name="ext_new_price[]" class="form-control new-input" placeholder="New Bottle Rate" min="0" step="0.01" style="display: none;">
+                            </td>
+                            <td style="text-align: center; vertical-align: middle;">
+                                <button type="button" class="remove-btn" onclick="deleteThisRow(this)" style="background-color: #cccccc; cursor: not-allowed;" disabled>Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 10px;">
+                    <button type="button" class="add-btn" onclick="customAddRow()">+ Add Extinguisher</button>
+                </div>
+                
+            </div>
+             <div class="form-group">
+                <label>Total Qty.<span class="required">*</span></label>
+                <input type="text" id="total_qty" name="total_qty" value="1" readonly required>
+            </div>
+
+        </div>
+
+        <button type="submit" class="save-btn">
+            SAVE CUSTOMER
+        </button>
+
+    </form>
+
+</div>
+
+<script src="fire.js"></script>
+
+<script>
+    // 📄 Dynamic Certificate Number Fetch Function
+    function fetchDynamicCertificateNo(selectedDate = '') {
+        let certInput = document.getElementById('certificate_no');
+        if (!certInput) return;
+
+        fetch('get_next_cer.php?service_date=' + encodeURIComponent(selectedDate))
+            .then(response => response.text())
+            .then(next_cert_no => {
+                certInput.value = next_cert_no.trim();
+            })
+            .catch(error => console.error('Error fetching certificate number:', error));
+    }
+
+    // Page Load hote hi Issue Date check karke Certificate fetch karega
+    window.addEventListener('DOMContentLoaded', (event) => {
+        let dateInput = document.getElementById('service_date');
+        if (dateInput) {
+            if (!dateInput.value) {
+                let today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+            fetchDynamicCertificateNo(dateInput.value);
+        } else {
+            fetchDynamicCertificateNo('');
+        }
+    });
+
+    // 🚀 Dynamic Row Adder
+    function customAddRow() {
+        let table = document.getElementById('extinguisherTable');
+        let tbody = table.querySelector('tbody');
+        let tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td>
+                <select name="ext_type[]" onchange="updateCapacity(this)" required>
+                    <option value="">Select Type</option>
+                    <option value="ABC">ABC Powder</option>
+                    <option value="CO2">CO2</option>
+                    <option value="Water">Water</option>
+                    <option value="Foam">Foam</option>
+                </select>
+            </td>
+            <td>
+                <select name="ext_capacity[]" class="capacity" required>
+                    <option value="">Select Capacity</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" name="ext_qty[]" class="ext-qty" value="1" min="1" oninput="calculateTotalQty()" required>
+            </td>
+            <td>
+                <select name="service_action_type[]" class="form-control service-toggle" onchange="togglePriceFields(this)">
+                    <option value="refilling">Refilling Only</option>
+                    <option value="new">New Bottle/Sale</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" name="ext_refilling_price[]" class="form-control ref-input" placeholder="Refill Rate" min="0" step="0.01">
+                <input type="number" name="ext_new_price[]" class="form-control new-input" placeholder="New Bottle Rate" min="0" step="0.01" style="display: none;">
+            </td>
+            <td style="text-align: center; vertical-align: middle;">
+                <button type="button" class="remove-btn" onclick="deleteThisRow(this)" style="background-color: #e57373; color: white; cursor: pointer;">Delete</button>
+            </td>
+        `;
+        
+        tbody.appendChild(tr);
+        
+        if (typeof calculateTotalQty === "function") {
+            calculateTotalQty();
+        }
+    }
+
+    // 🚀 Target row deletion
+    function deleteThisRow(button) {
+        let table = document.getElementById('extinguisherTable');
+        let rows = table.querySelector('tbody').getElementsByTagName('tr');
+        
+        if (rows.length > 1) {
+            button.closest('tr').remove();
+            if (typeof calculateTotalQty === "function") {
+                calculateTotalQty();
+            }
+        }
+    }
+
+    // 🔄 Dynamic Hidden/Visible toggling for prices
+    function togglePriceFields(selectElement) {
+        var row = selectElement.closest('tr');
+        var refInput = row.querySelector('.ref-input');
+        var newInput = row.querySelector('.new-input');
+        
+        if (selectElement.value === 'new') {
+            refInput.style.display = 'none';
+            refInput.value = ''; 
+            newInput.style.display = 'block';
+        } else {
+            newInput.style.display = 'none';
+            newInput.value = ''; 
+            refInput.style.display = 'block';
+        }
+    }
+
+    // ⌨️ Ctrl + S shortcut for New Form
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault(); 
+            
+            let myForm = document.getElementById('customerForm');
+            if (myForm) {
+                if (myForm.checkValidity()) {
+                    if (typeof confirmCertificateNo === "function") {
+                        confirmCertificateNo();
+                    }
+                    myForm.submit(); 
+                } else {
+                    myForm.reportValidity();
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
