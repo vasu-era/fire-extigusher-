@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
-import { TopNavbar } from '@/components/ui/TopNavbar';
-import { CustomerTable } from '@/components/customers/CustomerTable';
-import { SearchBar } from '@/components/customers/SearchBar';
 import { getCurrentFY } from '@/lib/financial-year';
+import { daysUntilExpiry } from '@/lib/utils';
 import { Customer } from '@/types';
+import Link from 'next/link';
 
 export default function CustomersPage() {
   const { data: session, status } = useSession();
@@ -19,95 +18,105 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
+    if (status === 'unauthenticated') router.push('/login');
   }, [status, router]);
 
   useEffect(() => {
-    if (session) {
-      fetchCustomers();
-    }
-  }, [selectedFY, search, session]);
+    if (session) fetchCustomers();
+  }, [selectedFY, session]);
 
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/customers?fy=${selectedFY}&search=${search}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCustomers(data.customers);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`/api/customers?fy=${selectedFY}`);
+      if (res.ok) { const d = await res.json(); setCustomers(d.customers); }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return;
-
-    try {
-      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchCustomers();
-      }
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-    }
+    if (!confirm('Delete this customer?')) return;
+    await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    fetchCustomers();
   };
 
-  if (status === 'loading' || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
-  }
+  const filtered = customers.filter(c =>
+    !search || c.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+    c.mobile.includes(search) || c.certificate_no.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const fyDisplay = selectedFY === 'all' ? 'All Time Records' : selectedFY === '25-26' ? 'FY 2025-26' : 'FY 2026-27';
+
+  if (status === 'loading' || !session) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-bg-main">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
       <Sidebar />
-      <div className="ml-[260px] p-8">
-        <TopNavbar selectedFY={selectedFY} onFYChange={setSelectedFY} />
-
-        <div className="bg-white rounded-xl shadow-card p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              👥 Customer Records (FY {selectedFY})
-            </h2>
-            <button
-              onClick={() => router.push('/customers/new')}
-              className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-hover"
-            >
-              + Add New Customer
-            </button>
+      <div className="main-content">
+        <div className="custlist-container">
+          <div className="header-panel">
+            <div>
+              <h2>👥 CUSTOMER MASTER DATABASE</h2>
+              <p>Rakesh Gas Suppliers — Viewing Records for <strong>{fyDisplay}</strong></p>
+            </div>
+            <div className="top-nav-btns">
+              <select className="fy-select" value={selectedFY} onChange={e => setSelectedFY(e.target.value)}>
+                <option value="26-27">FY 2026-27</option>
+                <option value="25-26">FY 2025-26</option>
+                <option value="all">All Time</option>
+              </select>
+              <Link href="/dashboard" className="nav-btn btn-back">← Dashboard</Link>
+            </div>
           </div>
 
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Search by name, mobile, or certificate number..."
-          />
-        </div>
-
-        <div className="bg-white rounded-xl shadow-card">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading customers...</div>
-          ) : customers.length > 0 ? (
-            <CustomerTable
-              customers={customers}
-              onEdit={(id) => router.push(`/customers/${id}/edit`)}
-              onDelete={handleDelete}
-              onViewCertificate={(id) => router.push(`/customers/${id}/certificate`)}
-              onRenew={(id) => router.push(`/customers/${id}/renew`)}
-            />
-          ) : (
-            <div className="p-8 text-center text-gray-500">
-              No customers found for this financial year
+          <div className="search-panel">
+            <div className="search-box-wrapper">
+              <span>🔍</span>
+              <input type="text" className="search-input" placeholder="Type name, phone number, or certificate number to search..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-          )}
+            <div className="total-badge">Customers in {selectedFY === 'all' ? 'Database' : selectedFY}: {filtered.length}</div>
+          </div>
+
+          <div className="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Certificate No</th><th>Customer Name</th><th>Mobile</th>
+                  <th>Issue Date</th><th>Expiry Date</th><th>Qty</th><th>Status</th>
+                  <th style={{ textAlign: 'center' }} colSpan={3}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length > 0 ? filtered.map(c => {
+                  const days = daysUntilExpiry(c.expiry_date);
+                  const statusClass = days < 0 ? 'status-expired' : days <= 30 ? 'status-due' : 'status-active';
+                  const statusText = days < 0 ? '🔴 Expired' : days <= 30 ? `🟡 Due (${days} Days)` : `🟢 Active (${days} Days)`;
+                  return (
+                    <tr key={c.id}>
+                      <td className="id-col">#{c.id}</td>
+                      <td><span className="cust-cert-badge">📄 {c.certificate_no}</span></td>
+                      <td><span className="cust-name-bold">{c.customer_name}</span></td>
+                      <td style={{ fontWeight: 500, color: '#475569' }}>📞 {c.mobile}</td>
+                      <td>📅 {new Date(c.service_date).toLocaleDateString('en-GB')}</td>
+                      <td>📅 {new Date(c.expiry_date).toLocaleDateString('en-GB')}</td>
+                      <td style={{ fontWeight: 700, color: '#1e293b' }}>{c.total_qty} Nos</td>
+                      <td><span className={`status-tag ${statusClass}`}>{statusText}</span></td>
+                      <td style={{ width: 50, paddingRight: 5 }}>
+                        <Link href={`/customers/${c.id}/certificate`} target="_blank" className="action-btn btn-view-print" title="Print Certificate">🖨️</Link>
+                      </td>
+                      <td style={{ width: 50, padding: '16px 5px' }}>
+                        <Link href={`/customers/${c.id}/edit`} className="action-btn btn-edit-action" title="Edit">✏️</Link>
+                      </td>
+                      <td style={{ width: 50, paddingLeft: 5 }}>
+                        <button onClick={() => handleDelete(c.id)} className="action-btn btn-delete-action" title="Delete">🗑️</button>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#64748b', fontWeight: 500 }}>Is Financial Year me koi bhi customer record nahi mila.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

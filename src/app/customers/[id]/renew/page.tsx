@@ -3,13 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Sidebar } from '@/components/ui/Sidebar';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
-import { ExtinguisherRow, createEmptyRow } from '@/components/customers/ExtinguisherRow';
-import { calculateExpiryDate } from '@/lib/utils';
-import { ExtinguisherFormRow, ExtinguisherDetail } from '@/types';
+import { calculateExpiryDate, generateId } from '@/lib/utils';
+import { ExtinguisherFormRow, ExtinguisherDetail, CAPACITY_OPTIONS } from '@/types';
 
 export default function RenewCustomerPage() {
   const { data: session, status } = useSession();
@@ -18,266 +13,86 @@ export default function RenewCustomerPage() {
   const id = params.id as string;
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [oldCertificateNo, setOldCertificateNo] = useState('');
-  const [formData, setFormData] = useState({
-    customer_name: '',
-    mobile: '',
-    address: '',
-    certificate_no: '',
-    service_date: new Date().toISOString().split('T')[0],
-    expiry_duration: 12,
-    expiry_date: '',
-    total_qty: 1,
-  });
+  const [oldCertNo, setOldCertNo] = useState('');
+  const [formData, setFormData] = useState({ customer_name: '', mobile: '', address: '', certificate_no: '', service_date: new Date().toISOString().split('T')[0], expiry_duration: 12, expiry_date: '', total_qty: 1 });
   const [extinguishers, setExtinguishers] = useState<ExtinguisherFormRow[]>([]);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
+  useEffect(() => { if (status === 'unauthenticated') router.push('/login'); }, [status, router]);
+  useEffect(() => { if (session) fetchOld(); }, [id, session]);
 
-  useEffect(() => {
-    if (session) {
-      fetchOldCustomer();
-    }
-  }, [id, session]);
-
-  const fetchOldCustomer = async () => {
+  const fetchOld = async () => {
     try {
       const res = await fetch(`/api/customers/${id}/renew`);
       if (res.ok) {
-        const data = await res.json();
-        setOldCertificateNo(data.oldCustomer.certificate_no);
-        setFormData({
-          customer_name: data.oldCustomer.customer_name,
-          mobile: data.oldCustomer.mobile,
-          address: data.oldCustomer.address || '',
-          certificate_no: data.newCertificateNo,
-          service_date: new Date().toISOString().split('T')[0],
-          expiry_duration: 12,
-          expiry_date: '',
-          total_qty: data.oldCustomer.total_qty,
-        });
-        setExtinguishers(
-          data.oldExtinguishers.map((ext: ExtinguisherDetail) => ({
-            id: String(ext.id),
-            ext_type: ext.ext_type,
-            ext_capacity: ext.ext_capacity,
-            ext_qty: ext.ext_qty,
-            service_action_type: ext.service_action_type,
-            ext_refilling_price: ext.ext_refilling_price,
-            ext_new_price: ext.ext_new_price,
-          }))
-        );
+        const d = await res.json();
+        setOldCertNo(d.oldCustomer.certificate_no);
+        setFormData({ customer_name: d.oldCustomer.customer_name, mobile: d.oldCustomer.mobile, address: d.oldCustomer.address || '', certificate_no: d.newCertificateNo, service_date: new Date().toISOString().split('T')[0], expiry_duration: 12, expiry_date: '', total_qty: d.oldCustomer.total_qty });
+        setExtinguishers(d.oldExtinguishers.map((ext: ExtinguisherDetail) => ({ id: String(ext.id), ext_type: ext.ext_type, ext_capacity: ext.ext_capacity, ext_qty: ext.ext_qty, service_action_type: ext.service_action_type, ext_refilling_price: ext.ext_refilling_price, ext_new_price: ext.ext_new_price })));
       }
-    } catch (error) {
-      console.error('Error fetching customer:', error);
-    } finally {
-      setFetching(false);
-    }
+    } catch (e) { console.error(e); } finally { setFetching(false); }
   };
 
-  useEffect(() => {
-    if (formData.service_date && formData.expiry_duration) {
-      const expiryDate = calculateExpiryDate(formData.service_date, formData.expiry_duration);
-      setFormData((prev) => ({ ...prev, expiry_date: expiryDate }));
-    }
-  }, [formData.service_date, formData.expiry_duration]);
+  useEffect(() => { if (formData.service_date && formData.expiry_duration) { setFormData(prev => ({ ...prev, expiry_date: calculateExpiryDate(formData.service_date, formData.expiry_duration) })); } }, [formData.service_date, formData.expiry_duration]);
 
-  const handleExtinguisherChange = (index: number, field: keyof ExtinguisherFormRow, value: any) => {
-    const updated = [...extinguishers];
-    updated[index] = { ...updated[index], [field]: value };
-    setExtinguishers(updated);
-    updateTotalQty(updated);
-  };
-
-  const handleExtinguisherRemove = (index: number) => {
-    if (extinguishers.length > 1) {
-      const updated = extinguishers.filter((_, i) => i !== index);
-      setExtinguishers(updated);
-      updateTotalQty(updated);
-    }
-  };
-
-  const addExtinguisherRow = () => {
-    setExtinguishers([...extinguishers, createEmptyRow()]);
-  };
-
-  const updateTotalQty = (exts: ExtinguisherFormRow[]) => {
-    const total = exts.reduce((sum, ext) => sum + ext.ext_qty, 0);
-    setFormData((prev) => ({ ...prev, total_qty: total }));
-  };
+  const updateExt = (i: number, field: keyof ExtinguisherFormRow, val: any) => { const u = [...extinguishers]; u[i] = { ...u[i], [field]: val }; setExtinguishers(u); setFormData(prev => ({ ...prev, total_qty: u.reduce((s, e) => s + e.ext_qty, 0) })); };
+  const removeExt = (i: number) => { if (extinguishers.length > 1) { const u = extinguishers.filter((_, idx) => idx !== i); setExtinguishers(u); setFormData(prev => ({ ...prev, total_qty: u.reduce((s, e) => s + e.ext_qty, 0) })); } };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+    e.preventDefault(); setLoading(true);
     try {
-      const res = await fetch(`/api/customers/${id}/renew`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, extinguishers, old_certificate_no: oldCertificateNo }),
-      });
-
-      if (res.ok) {
-        router.push('/customers');
-      } else {
-        alert('Error renewing customer');
-      }
-    } catch (error) {
-      console.error('Error renewing customer:', error);
-    } finally {
-      setLoading(false);
-    }
+      const expParts = formData.expiry_date.split('/');
+      const expFormatted = `${expParts[2]}-${expParts[0]}-${expParts[1]}`;
+      const res = await fetch(`/api/customers/${id}/renew`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, expiry_date: expFormatted, extinguishers, old_certificate_no: oldCertNo }) });
+      if (res.ok) { const d = await res.json(); router.push(`/customers/${d.customer.id}/certificate`); } else alert('Error');
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  if (status === 'loading' || !session || fetching) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
-  }
+  if (status === 'loading' || !session || fetching) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-bg-main">
-      <Sidebar />
-      <div className="ml-[260px] p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-card p-8">
-            <h1 className="text-2xl font-bold text-center text-primary mb-6">
-              RAKESH GAS SUPPLIERS
-            </h1>
-            <p className="text-center text-gray-600 mb-8">
-              Renew Customer - {oldCertificateNo}
-            </p>
+    <div className="form-page">
+      <div className="form-container">
+        <div className="logo-title"><h1>RAKESH GAS SUPPLIERS</h1><p>Fire Extinguisher Service Management System (New Renewal Mode)</p><p style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: 14 }}>✅ Last year&apos;s data is fully safe in history.</p></div>
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-group"><label>Customer Name <span className="required">*</span></label><input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} required /></div>
+            <div className="form-group"><label>Mobile Number <span className="required">*</span></label><input type="tel" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} pattern="[0-9]{10}" maxLength={10} required /></div>
+            <div className="form-group full-width"><label>Address <span className="required">*</span></label><textarea rows={2} value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} required /></div>
+            <div className="form-group"><label>New Certificate Number <span className="required">*</span></label><input type="text" value={formData.certificate_no} readOnly required style={{ backgroundColor: '#f1f3f5', fontWeight: 'bold' }} /></div>
+            <div className="form-group"><label>New Issue Date <span className="required">*</span></label><input type="date" value={formData.service_date} onChange={e => setFormData({ ...formData, service_date: e.target.value })} required /></div>
+            <div className="form-group"><label>Validity Duration <span className="required">*</span></label>
+              <select value={formData.expiry_duration} onChange={e => setFormData({ ...formData, expiry_duration: parseInt(e.target.value) })}>
+                <option value="12">1 Year (Standard)</option><option value="6">6 Months</option><option value="24">2 Years</option><option value="36">3 Years</option><option value="60">5 Years</option>
+              </select>
+            </div>
+            <div className="form-group"><label>New Expiry Date <span className="required">*</span></label><input type="text" value={formData.expiry_date} readOnly required /></div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Customer Name"
-                  required
-                  value={formData.customer_name}
-                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                />
-
-                <Input
-                  label="Mobile Number"
-                  type="tel"
-                  required
-                  pattern="[0-9]{10}"
-                  maxLength={10}
-                  value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                />
-
-                <div className="col-span-2">
-                  <Input
-                    label="Address"
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  />
-                </div>
-
-                <Input
-                  label="New Certificate Number"
-                  required
-                  value={formData.certificate_no}
-                  readOnly
-                  className="bg-gray-100 font-bold"
-                />
-
-                <Input
-                  label="New Issue Date"
-                  type="date"
-                  required
-                  value={formData.service_date}
-                  onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
-                />
-
-                <Select
-                  label="Validity Duration"
-                  required
-                  value={formData.expiry_duration}
-                  onChange={(e) => setFormData({ ...formData, expiry_duration: parseInt(e.target.value) })}
-                >
-                  <option value="12">1 Year (Standard)</option>
-                  <option value="6">6 Months</option>
-                  <option value="24">2 Years</option>
-                  <option value="36">3 Years</option>
-                  <option value="60">5 Years</option>
-                </Select>
-
-                <Input
-                  label="New Expiry Date"
-                  type="text"
-                  required
-                  value={formData.expiry_date}
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-3">Extinguisher Details (Carried Forward)</h3>
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-primary text-white">
-                      <th className="border border-gray-300 px-3 py-2">Type</th>
-                      <th className="border border-gray-300 px-3 py-2">Capacity</th>
-                      <th className="border border-gray-300 px-3 py-2">Qty</th>
-                      <th className="border border-gray-300 px-3 py-2">Service Type</th>
-                      <th className="border border-gray-300 px-3 py-2">Amount</th>
-                      <th className="border border-gray-300 px-3 py-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extinguishers.map((row, index) => (
-                      <ExtinguisherRow
-                        key={row.id}
-                        row={row}
-                        index={index}
-                        onChange={handleExtinguisherChange}
-                        onRemove={handleExtinguisherRemove}
-                        canRemove={extinguishers.length > 1}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-
-                <button
-                  type="button"
-                  onClick={addExtinguisherRow}
-                  className="mt-3 bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700"
-                >
-                  + Add Extinguisher
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Total Quantity"
-                  required
-                  value={formData.total_qty}
-                  readOnly
-                  className="bg-gray-100 font-bold"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                loading={loading}
-                className="w-full"
-              >
-                🚀 GENERATE RENEWED CERTIFICATE
-              </Button>
-            </form>
+            <div className="form-group full-width">
+              <h3>Extinguisher Details (Carried Forward) <span className="required">*</span></h3>
+              <table id="extinguisherTable">
+                <thead><tr><th>Type</th><th>Capacity</th><th>Qty</th><th>Service Type</th><th>Amount</th><th>Action</th></tr></thead>
+                <tbody>
+                  {extinguishers.map((row, i) => {
+                    const caps = CAPACITY_OPTIONS.find(o => o.type === row.ext_type)?.capacities || [];
+                    return (
+                      <tr key={row.id}>
+                        <td><select value={row.ext_type} onChange={e => updateExt(i, 'ext_type', e.target.value)} required><option value="">Select</option><option value="ABC">ABC Powder</option><option value="CO2">CO2</option><option value="Water">Water</option><option value="Foam">Foam</option></select></td>
+                        <td><select value={row.ext_capacity} onChange={e => updateExt(i, 'ext_capacity', e.target.value)} required><option value="">Select</option>{caps.map(c => <option key={c} value={c}>{c}</option>)}</select></td>
+                        <td><input type="number" value={row.ext_qty} min={1} onChange={e => updateExt(i, 'ext_qty', parseInt(e.target.value) || 1)} required /></td>
+                        <td><select value={row.service_action_type} onChange={e => updateExt(i, 'service_action_type', e.target.value)}><option value="refilling">Refilling Only</option><option value="new">New Bottle/Sale</option></select></td>
+                        <td>{row.service_action_type === 'refilling' ? <input type="number" placeholder="Refill Rate" value={row.ext_refilling_price || ''} min={0} step={0.01} onChange={e => updateExt(i, 'ext_refilling_price', parseFloat(e.target.value) || 0)} /> : <input type="number" placeholder="New Rate" value={row.ext_new_price || ''} min={0} step={0.01} onChange={e => updateExt(i, 'ext_new_price', parseFloat(e.target.value) || 0)} />}</td>
+                        <td style={{ textAlign: 'center' }}><button type="button" className="remove-btn" onClick={() => removeExt(i)} disabled={extinguishers.length <= 1}>✕</button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <button type="button" className="add-btn" onClick={() => setExtinguishers([...extinguishers, { id: generateId(), ext_type: '', ext_capacity: '', ext_qty: 1, service_action_type: 'refilling', ext_refilling_price: 0, ext_new_price: 0 }])}>+ Add Extinguisher</button>
+            </div>
+            <div className="form-group"><label>Total Qty. <span className="required">*</span></label><input type="text" value={formData.total_qty} readOnly required /></div>
           </div>
-        </div>
+          <button type="submit" className="save-btn" disabled={loading}>{loading ? 'PROCESSING...' : '🚀 GENERATE RENEWED CERTIFICATE'}</button>
+        </form>
       </div>
     </div>
   );
