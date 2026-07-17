@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import QRCode from 'qrcode';
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
 
-  const { data: customer, error: customerError } = await supabase
+  const { data: customer, error: customerError } = await supabaseAdmin
     .from('customers')
     .select('*')
     .eq('id', id)
@@ -18,7 +18,7 @@ export async function GET(
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
   }
 
-  const { data: extinguishers, error: extError } = await supabase
+  const { data: extinguishers, error: extError } = await supabaseAdmin
     .from('extinguisher_details')
     .select('*')
     .eq('customer_id', id);

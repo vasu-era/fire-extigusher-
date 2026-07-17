@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getFYDates, getFYFromDate } from '@/lib/financial-year';
+import { supabaseAdmin } from '@/lib/supabase';
+import { getFYDates } from '@/lib/financial-year';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   const { start_date, end_date } = getFYDates(fy);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('customers')
     .select('*')
     .eq('is_active', true)
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   today.setHours(0, 0, 0, 0);
 
   const total = customers.length;
-  
+
   const expiryDue = customers.filter((c) => {
     const expiry = new Date(c.expiry_date);
     const diff = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

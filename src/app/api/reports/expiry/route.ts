@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   const today = new Date();
   const thirtyDaysLater = new Date();
   thirtyDaysLater.setDate(today.getDate() + 30);
 
-  const { data, error } = await supabase
+  const todayStr = today.toISOString().split('T')[0];
+  const futureStr = thirtyDaysLater.toISOString().split('T')[0];
+
+  const { data, error } = await supabaseAdmin
     .from('customers')
     .select('*')
     .eq('is_active', true)
-    .gte('expiry_date', today.toISOString().split('T')[0])
-    .lte('expiry_date', thirtyDaysLater.toISOString().split('T')[0])
+    .gte('expiry_date', todayStr)
+    .lte('expiry_date', futureStr)
     .order('expiry_date', { ascending: true });
 
   if (error) {

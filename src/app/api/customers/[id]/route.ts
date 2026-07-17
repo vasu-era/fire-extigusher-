@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
 
-  const { data: customer, error: customerError } = await supabase
+  const { data: customer, error: customerError } = await supabaseAdmin
     .from('customers')
     .select('*')
     .eq('id', id)
@@ -17,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
   }
 
-  const { data: extinguishers, error: extError } = await supabase
+  const { data: extinguishers, error: extError } = await supabaseAdmin
     .from('extinguisher_details')
     .select('*')
     .eq('customer_id', id);
@@ -36,7 +36,7 @@ export async function PUT(
   const { id } = await context.params;
   const body = await request.json();
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('customers')
     .update({
       customer_name: body.customer_name,
@@ -53,7 +53,7 @@ export async function PUT(
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  await supabase
+  await supabaseAdmin
     .from('extinguisher_details')
     .delete()
     .eq('customer_id', id);
@@ -69,7 +69,7 @@ export async function PUT(
       service_action_type: ext.service_action_type,
     }));
 
-    const { error: extError } = await supabase
+    const { error: extError } = await supabaseAdmin
       .from('extinguisher_details')
       .insert(extData);
 
@@ -77,6 +77,14 @@ export async function PUT(
       return NextResponse.json({ error: extError.message }, { status: 500 });
     }
   }
+
+  await supabaseAdmin
+    .from('customer_history')
+    .insert({
+      customer_id: parseInt(id),
+      action_type: 'update',
+      new_values: { customer_name: body.customer_name, total_qty: body.total_qty },
+    });
 
   return NextResponse.json({ success: true });
 }
@@ -87,7 +95,7 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('customers')
     .update({ is_active: false })
     .eq('id', id);
@@ -95,6 +103,13 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabaseAdmin
+    .from('customer_history')
+    .insert({
+      customer_id: parseInt(id),
+      action_type: 'delete',
+    });
 
   return NextResponse.json({ success: true });
 }

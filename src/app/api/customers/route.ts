@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getFYDates } from '@/lib/financial-year';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   const { start_date, end_date } = getFYDates(fy);
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('customers')
     .select('*')
     .eq('is_active', true);

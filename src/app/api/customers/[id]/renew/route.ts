@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getNextCertificateNumber } from '@/lib/certificate';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +7,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
 
-  const { data: oldCustomer, error: customerError } = await supabase
+  const { data: oldCustomer, error: customerError } = await supabaseAdmin
     .from('customers')
     .select('*')
     .eq('id', id)
@@ -18,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
   }
 
-  const { data: oldExtinguishers, error: extError } = await supabase
+  const { data: oldExtinguishers, error: extError } = await supabaseAdmin
     .from('extinguisher_details')
     .select('*')
     .eq('customer_id', id);
@@ -27,12 +26,30 @@ export async function GET(
     return NextResponse.json({ error: extError.message }, { status: 500 });
   }
 
-  const newCertificateNo = await getNextCertificateNumber();
+  const fy = new Date().getMonth() + 1 >= 4
+    ? `${String(new Date().getFullYear()).slice(-2)}-${String(new Date().getFullYear() + 1).slice(-2)}`
+    : `${String(new Date().getFullYear() - 1).slice(-2)}-${String(new Date().getFullYear()).slice(-2)}`;
+
+  const prefix = `RGS/${fy}/`;
+  const { data: lastCert } = await supabaseAdmin
+    .from('customers')
+    .select('certificate_no')
+    .like('certificate_no', `${prefix}%`)
+    .order('id', { ascending: false })
+    .limit(1)
+    .single();
+
+  let nextNum = 1;
+  if (lastCert) {
+    const parts = lastCert.certificate_no.split('/');
+    const lastN = parseInt(parts[parts.length - 1]);
+    if (!isNaN(lastN)) nextNum = lastN + 1;
+  }
 
   return NextResponse.json({
     oldCustomer,
     oldExtinguishers: oldExtinguishers || [],
-    newCertificateNo,
+    newCertificateNo: `${prefix}${nextNum}`,
   });
 }
 
@@ -43,7 +60,7 @@ export async function POST(
   const { id } = await context.params;
   const body = await request.json();
 
-  const { data: newCustomer, error: customerError } = await supabase
+  const { data: newCustomer, error: customerError } = await supabaseAdmin
     .from('customers')
     .insert({
       certificate_no: body.certificate_no,
@@ -72,7 +89,7 @@ export async function POST(
       service_action_type: ext.service_action_type,
     }));
 
-    const { error: extError } = await supabase
+    const { error: extError } = await supabaseAdmin
       .from('extinguisher_details')
       .insert(extData);
 
@@ -81,7 +98,7 @@ export async function POST(
     }
   }
 
-  await supabase
+  await supabaseAdmin
     .from('customer_history')
     .insert({
       customer_id: parseInt(id),
