@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fire Extinguisher Management System
 
-## Getting Started
+Modern Next.js application for managing fire extinguisher sales, refilling, and certification.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 14+ (App Router)
+- **Language**: TypeScript
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: NextAuth.js
+- **Styling**: Tailwind CSS
+- **Deployment**: Vercel
+
+## Features
+
+- Customer management (CRUD)
+- Automatic certificate number generation
+- Certificate printing with QR codes
+- Customer renewal system
+- Financial year filtering
+- Monthly reports
+- Expiry tracking
+- Dashboard analytics
+- Excel export
+
+## Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+cd fire-app
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up Supabase
+
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to SQL Editor
+4. Copy and run the SQL from `supabase/schema.sql`
+5. Generate admin password hash:
+   ```bash
+   node scripts/generate-hash.js
+   ```
+6. Run the generated INSERT statement in Supabase SQL Editor
+
+### 4. Configure Environment Variables
+
+1. Copy `.env.local.example` to `.env.local`
+2. Get your Supabase credentials from Settings > API
+3. Update `.env.local` with your credentials:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   NEXTAUTH_SECRET=your-random-secret-min-32-chars
+   NEXTAUTH_URL=http://localhost:3000
+   ```
+
+### 5. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 6. Login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Username**: admin
+- **Password**: admin123
 
-## Learn More
+## Deployment to Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Push code to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── customers/         # Customer pages
+│   ├── dashboard/         # Dashboard page
+│   ├── reports/           # Report pages
+│   ├── login/             # Login page
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   ├── ui/               # UI components
+│   ├── customers/        # Customer components
+│   ├── dashboard/        # Dashboard components
+│   └── certificate/      # Certificate components
+├── lib/                  # Utility functions
+├── types/                # TypeScript types
+└── hooks/                # Custom hooks
+```
 
-## Deploy on Vercel
+## Default Credentials
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Username**: admin
+- **Password**: admin123
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Important**: Change the default password after first login!
+
+## License
+
+MIT
