@@ -36,30 +36,13 @@ export default function DashboardPage() {
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();
-        setStats(statsData);
+        setStats({ total: statsData.total, expiryDue: statsData.expiryDue, expired: statsData.expired, monthlyCount: statsData.monthlyCount });
+        setNotifications(statsData.notifications || []);
       }
 
       if (customersRes.ok) {
         const customersData = await customersRes.json();
         setRecentCustomers(customersData.customers.slice(0, 5));
-
-        const today = new Date();
-        const month = today.getMonth() + 1;
-        const year = today.getFullYear();
-        const notifs = customersData.customers
-          .filter((c: Customer) => {
-            const exp = new Date(c.expiry_date);
-            return exp.getMonth() + 1 === month && exp.getFullYear() === year && c.mobile;
-          })
-          .slice(0, 20);
-        setNotifications(notifs.map((c: Customer) => ({
-          id: c.id,
-          customer_name: c.customer_name,
-          certificate_no: c.certificate_no,
-          expiry_date: c.expiry_date,
-          days_left: Math.ceil((new Date(c.expiry_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)),
-          mobile: c.mobile,
-        })));
       }
     } catch (error) {
       console.error('Error fetching data:', error);

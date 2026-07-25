@@ -51,10 +51,43 @@ export async function GET(request: NextRequest) {
     return serviceDate.getMonth() === currentMonth && serviceDate.getFullYear() === currentYear;
   }).length;
 
+  let notifQuery = supabaseAdmin
+    .from('customers')
+    .select('*')
+    .eq('is_active', true)
+    .not('mobile', 'is', null)
+    .order('expiry_date', { ascending: true });
+
+  if (fy === 'others') {
+    notifQuery = notifQuery.or('expiry_date.is.null,expiry_date.eq.0000-00-00');
+  } else if (fy !== 'all') {
+    notifQuery = notifQuery
+      .gte('expiry_date', start_date)
+      .lte('expiry_date', end_date);
+  }
+
+  const { data: notifData } = await notifQuery;
+  const allNotifCustomers = notifData || [];
+  const notifications = allNotifCustomers
+    .filter((c) => {
+      const exp = new Date(c.expiry_date);
+      return exp.getMonth() === currentMonth && exp.getFullYear() === currentYear;
+    })
+    .slice(0, 20)
+    .map((c) => ({
+      id: c.id,
+      customer_name: c.customer_name,
+      certificate_no: c.certificate_no,
+      expiry_date: c.expiry_date,
+      days_left: Math.ceil((new Date(c.expiry_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      mobile: c.mobile,
+    }));
+
   return NextResponse.json({
     total,
     expiryDue,
     expired,
     monthlyCount,
+    notifications,
   });
 }
