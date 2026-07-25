@@ -56,3 +56,23 @@ export function parseCertificateNo(certNo: string): { fy: string; number: number
     number: parseInt(match[2]),
   };
 }
+
+export interface FYOption {
+  key: string;
+  label: string;
+}
+
+export function generateFYOptions(oldestYear: number): FYOption[] {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentFullYear = now.getFullYear();
+  const presentFYStart = currentMonth >= 4 ? currentFullYear : currentFullYear - 1;
+
+  const options: FYOption[] = [];
+  for (let y = presentFYStart; y >= oldestYear - 1; y--) {
+    const key = `${String(y).slice(-2)}-${String(y + 1).slice(-2)}`;
+    const label = `FY ${y}-${String(y + 1).slice(-2)}`;
+    options.push({ key, label });
+  }
+  return options;
+}

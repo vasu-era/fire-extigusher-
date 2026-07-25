@@ -5,11 +5,13 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { calculateExpiryDate, generateId } from '@/lib/utils';
 import { ExtinguisherFormRow, ExtinguisherDetail, CAPACITY_OPTIONS } from '@/types';
+import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 
 export default function EditCustomerPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
+  useFormKeyboard();
   const id = params.id as string;
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);

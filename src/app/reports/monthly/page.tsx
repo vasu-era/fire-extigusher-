@@ -9,6 +9,7 @@ import { getCurrentFY } from '@/lib/financial-year';
 import { daysUntilExpiry } from '@/lib/utils';
 import { Customer } from '@/types';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 export default function MonthlyReportPage() {
   const { data: session, status } = useSession();
@@ -21,6 +22,13 @@ export default function MonthlyReportPage() {
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/login'); }, [status, router]);
   useEffect(() => { if (session) fetchReport(); }, [selectedFY, month, year, session]);
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') router.push(`/dashboard?fy=${selectedFY}`);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [router, selectedFY]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -30,7 +38,7 @@ export default function MonthlyReportPage() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const fyDisplay = selectedFY === '25-26' ? '2025-26' : '2026-27';
+  const fyDisplay = selectedFY === 'all' ? 'All Time' : selectedFY === 'others' ? 'Unassigned' : `${2000 + parseInt(selectedFY.split('-')[0])}-${2000 + parseInt(selectedFY.split('-')[1])}`;
   const newCount = customers.filter((c, i) => customers.findIndex(x => x.mobile === c.mobile) === i).length;
   const renewCount = customers.length - newCount;
   const activeCount = customers.filter(c => daysUntilExpiry(c.expiry_date) > 30).length;
@@ -38,6 +46,27 @@ export default function MonthlyReportPage() {
   const expiredCount = customers.filter(c => daysUntilExpiry(c.expiry_date) < 0).length;
 
   if (status === 'loading' || !session) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+
+  const exportToExcel = () => {
+    const rows = customers.map(c => {
+      const days = daysUntilExpiry(c.expiry_date);
+      const isRenew = customers.findIndex(x => x.mobile === c.mobile) !== customers.indexOf(c);
+      return {
+        'Certificate No.': c.certificate_no,
+        'Customer Name': c.customer_name,
+        'Type': isRenew ? 'Renew' : 'New',
+        'Mobile': c.mobile,
+        'Issue Date': new Date(c.service_date).toLocaleDateString('en-GB'),
+        'Expiry Date': new Date(c.expiry_date).toLocaleDateString('en-GB'),
+        'Days Left': days < 0 ? 'Expired' : `${days} Days`,
+        'Status': days < 0 ? 'Expired' : days <= 30 ? 'Due' : 'Active',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Monthly Report');
+    XLSX.writeFile(wb, `Monthly_Service_Report_${month}_${year}.xls`);
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
@@ -67,6 +96,7 @@ export default function MonthlyReportPage() {
               <div className="btn-actions-group">
                 <button type="button" className="btn-style btn-view" onClick={fetchReport}>🔍 Filter Report</button>
                 <button type="button" className="btn-style btn-print" onClick={() => window.print()}>🖨 Print</button>
+                <button type="button" className="btn-style btn-excel" onClick={() => exportToExcel()}>📊 Export Excel</button>
               </div>
             </div>
             <div className="fy-badge">Financial Year: {fyDisplay}</div>
@@ -82,18 +112,40 @@ export default function MonthlyReportPage() {
           </div>
 
           <div className="table-wrapper">
-            <table className="report-table">
-              <thead><tr><th>Certificate No.</th><th>Customer Name</th><th>Mobile</th><th>Issue Date</th><th>Expiry Date</th><th>Days Left</th><th>Status</th><th className="btn-action" style={{ textAlign: 'center' }}>Action</th></tr></thead>
+            <table className="report-table" id="reportTable">
+              <thead><tr><th>Certificate No.</th><th>Customer Name</th><th>Type</th><th>Mobile</th><th>Issue Date</th><th>Expiry Date</th><th>Days Left</th><th>Status</th><th className="btn-action" style={{ textAlign: 'center' }}>Action</th></tr></thead>
               <tbody>
                 {customers.length > 0 ? customers.map(c => {
                   const days = daysUntilExpiry(c.expiry_date);
                   const statusClass = days < 0 ? 'status-expired' : days <= 30 ? 'status-due' : 'status-active';
                   const statusText = days < 0 ? '🔴 Expired' : days <= 30 ? '🟡 Due' : '🟢 Active';
                   const daysText = days < 0 ? 'Expired' : `${days} Days`;
+                  const isRenew = customers.findIndex(x => x.mobile === c.mobile) !== customers.indexOf(c);
+                  const typeClass = isRenew ? 'type-renew' : 'type-new';
+                  const typeText = isRenew ? 'Renew 🔄' : 'New ➕';
+
+                  const svcDate = new Date(c.service_date);
+                  const expDate = new Date(c.expiry_date);
+                  const isServiceThisMonth = svcDate.getMonth() + 1 === month && svcDate.getFullYear() === year;
+                  const isExpiryThisMonth = expDate.getMonth() + 1 === month && expDate.getFullYear() === year;
+
+                  let typeNote = null;
+                  if (isServiceThisMonth && isExpiryThisMonth) {
+                    typeNote = <span className="job-tag" style={{ background: '#faf5ff', color: '#7e22ce' }}>🔄 Done & Expiring</span>;
+                  } else if (isServiceThisMonth) {
+                    typeNote = <span className="job-tag" style={{ background: '#ecfdf5', color: '#047857' }}>✨ Job Done This Month</span>;
+                  } else if (isExpiryThisMonth) {
+                    typeNote = <span className="job-tag" style={{ background: '#fff5f5', color: '#e11d48' }}>⚠️ Expiring This Month</span>;
+                  }
+
                   return (
                     <tr key={c.id}>
                       <td className="cert-bold">📄 {c.certificate_no}</td>
-                      <td><span style={{ fontWeight: 600, color: '#1e293b' }}>{c.customer_name}</span></td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: '#1e293b' }}>{c.customer_name}</span>
+                        {typeNote && <><br />{typeNote}</>}
+                      </td>
+                      <td><span className={`type-tag ${typeClass}`}>{typeText}</span></td>
                       <td style={{ fontWeight: 500, color: '#475569' }}>📞 {c.mobile}</td>
                       <td>📅 {new Date(c.service_date).toLocaleDateString('en-GB')}</td>
                       <td>📅 {new Date(c.expiry_date).toLocaleDateString('en-GB')}</td>
@@ -105,7 +157,7 @@ export default function MonthlyReportPage() {
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', color: '#64748b', padding: 40 }}>Is month me koi data nahi mila.</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', color: '#64748b', padding: 40 }}>Is month me koi data nahi mila.</td></tr>
                 )}
               </tbody>
             </table>

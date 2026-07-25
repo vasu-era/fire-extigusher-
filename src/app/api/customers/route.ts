@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     .select('*')
     .eq('is_active', true);
 
-  if (fy !== 'all') {
+  if (fy === 'others') {
+    query = query.or('service_date.is.null,service_date.eq.0000-00-00');
+  } else if (fy !== 'all') {
     query = query
       .gte('service_date', start_date)
       .lte('service_date', end_date);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { calculateExpiryDate, generateId } from '@/lib/utils';
 import { ExtinguisherFormRow, CAPACITY_OPTIONS } from '@/types';
+import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 
 function createEmptyRow(): ExtinguisherFormRow {
   return { id: generateId(), ext_type: '', ext_capacity: '', ext_qty: 1, service_action_type: 'refilling', ext_refilling_price: 0, ext_new_price: 0 };
@@ -13,6 +14,7 @@ function createEmptyRow(): ExtinguisherFormRow {
 export default function NewCustomerPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useFormKeyboard();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: '', mobile: '', address: '', certificate_no: '',

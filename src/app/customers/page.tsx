@@ -7,7 +7,9 @@ import { Sidebar } from '@/components/ui/Sidebar';
 import { getCurrentFY } from '@/lib/financial-year';
 import { daysUntilExpiry } from '@/lib/utils';
 import { Customer } from '@/types';
+import { FYOption } from '@/lib/financial-year';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 export default function CustomersPage() {
   const { data: session, status } = useSession();
@@ -16,10 +18,18 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [fyOptions, setFyOptions] = useState<FYOption[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
   }, [status, router]);
+
+  useEffect(() => {
+    fetch('/api/reports/fy-options')
+      .then(r => r.json())
+      .then(d => setFyOptions(d.options || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (session) fetchCustomers();
@@ -44,9 +54,25 @@ export default function CustomersPage() {
     c.mobile.includes(search) || c.certificate_no.toLowerCase().includes(search.toLowerCase())
   );
 
-  const fyDisplay = selectedFY === 'all' ? 'All Time Records' : selectedFY === '25-26' ? 'FY 2025-26' : 'FY 2026-27';
+  const fyDisplay = selectedFY === 'all' ? 'All Time Records' : selectedFY === 'others' ? 'Unassigned Records' : `FY 20${selectedFY.split('-')[0]}-${selectedFY.split('-')[1]}`;
 
   if (status === 'loading' || !session) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+
+  const exportToExcel = () => {
+    const rows = filtered.map(c => ({
+      'Certificate No.': c.certificate_no,
+      'Customer Name': c.customer_name,
+      'Mobile': c.mobile,
+      'Address': c.address || '',
+      'Issue Date': new Date(c.service_date).toLocaleDateString('en-GB'),
+      'Expiry Date': new Date(c.expiry_date).toLocaleDateString('en-GB'),
+      'Total Qty': c.total_qty,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+    XLSX.writeFile(wb, `Customers_${selectedFY}.xlsx`);
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
@@ -60,9 +86,9 @@ export default function CustomersPage() {
             </div>
             <div className="top-nav-btns">
               <select className="fy-select" value={selectedFY} onChange={e => setSelectedFY(e.target.value)}>
-                <option value="26-27">FY 2026-27</option>
-                <option value="25-26">FY 2025-26</option>
+                {fyOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
                 <option value="all">All Time</option>
+                <option value="others">Others/Unassigned</option>
               </select>
               <Link href="/dashboard" className="nav-btn btn-back">← Dashboard</Link>
             </div>
@@ -74,6 +100,7 @@ export default function CustomersPage() {
               <input type="text" className="search-input" placeholder="Type name, phone number, or certificate number to search..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div className="total-badge">Customers in {selectedFY === 'all' ? 'Database' : selectedFY}: {filtered.length}</div>
+            <button type="button" className="btn-style btn-excel" onClick={exportToExcel}>📊 Export Excel</button>
           </div>
 
           <div className="table-card">

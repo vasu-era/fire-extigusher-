@@ -72,7 +72,7 @@ export default function DashboardPage() {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '18px' }}>Loading...</div>;
   }
 
-  const fyTitle = selectedFY === '25-26' ? '2025-26' : '2026-27';
+  const fyTitle = selectedFY === 'others' ? 'Unassigned' : selectedFY === 'all' ? 'All Time' : `20${selectedFY.split('-')[0]}-${selectedFY.split('-')[1]}`;
   const currentMonthYear = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   return (

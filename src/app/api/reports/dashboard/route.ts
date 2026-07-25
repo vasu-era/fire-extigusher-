@@ -8,12 +8,20 @@ export async function GET(request: NextRequest) {
 
   const { start_date, end_date } = getFYDates(fy);
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('customers')
     .select('*')
-    .eq('is_active', true)
-    .gte('service_date', start_date)
-    .lte('service_date', end_date);
+    .eq('is_active', true);
+
+  if (fy === 'others') {
+    query = query.or('service_date.is.null,service_date.eq.0000-00-00');
+  } else if (fy !== 'all') {
+    query = query
+      .gte('service_date', start_date)
+      .lte('service_date', end_date);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
