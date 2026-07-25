@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getFYDates } from '@/lib/financial-year';
 
+function parseDate(val: string): Date | null {
+  if (!val) return null;
+  if (val.includes('-')) {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (val.includes('/')) {
+    const parts = val.split('/');
+    if (parts.length === 3) {
+      const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const fy = searchParams.get('fy') || 'all';
@@ -34,20 +50,23 @@ export async function GET(request: NextRequest) {
   const total = customers.length;
 
   const expiryDue = customers.filter((c) => {
-    const expiry = new Date(c.expiry_date);
+    const expiry = parseDate(c.expiry_date);
+    if (!expiry) return false;
     const diff = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diff >= 0 && diff <= 30;
   }).length;
 
   const expired = customers.filter((c) => {
-    const expiry = new Date(c.expiry_date);
+    const expiry = parseDate(c.expiry_date);
+    if (!expiry) return false;
     return expiry < today;
   }).length;
 
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
   const monthlyCount = customers.filter((c) => {
-    const serviceDate = new Date(c.service_date);
+    const serviceDate = parseDate(c.service_date);
+    if (!serviceDate) return false;
     return serviceDate.getMonth() === currentMonth && serviceDate.getFullYear() === currentYear;
   }).length;
 
@@ -55,7 +74,6 @@ export async function GET(request: NextRequest) {
     .from('customers')
     .select('*')
     .eq('is_active', true)
-    .not('mobile', 'is', null)
     .order('expiry_date', { ascending: true });
 
   if (fy === 'others') {
@@ -66,11 +84,16 @@ export async function GET(request: NextRequest) {
       .lte('expiry_date', end_date);
   }
 
-  const { data: notifData } = await notifQuery;
+  const { data: notifData, error: notifError } = await notifQuery;
+  if (notifError) {
+    console.error('Notification query error:', notifError);
+  }
   const allNotifCustomers = notifData || [];
+  console.log('FY:', fy, 'start:', start_date, 'end:', end_date, 'month:', currentMonth, 'year:', currentYear, 'notifCount:', allNotifCustomers.length);
   const notifications = allNotifCustomers
     .filter((c) => {
-      const exp = new Date(c.expiry_date);
+      const exp = parseDate(c.expiry_date);
+      if (!exp) return false;
       return exp.getMonth() === currentMonth && exp.getFullYear() === currentYear;
     })
     .slice(0, 20)
@@ -79,7 +102,7 @@ export async function GET(request: NextRequest) {
       customer_name: c.customer_name,
       certificate_no: c.certificate_no,
       expiry_date: c.expiry_date,
-      days_left: Math.ceil((new Date(c.expiry_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      days_left: Math.ceil((parseDate(c.expiry_date)!.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
       mobile: c.mobile,
     }));
 
