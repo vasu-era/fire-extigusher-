@@ -67,6 +67,18 @@ CREATE TABLE backups (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Payments table
+CREATE TABLE payments (
+  id SERIAL PRIMARY KEY,
+  customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_date DATE NOT NULL,
+  payment_method VARCHAR(20) DEFAULT 'cash',
+  payment_status VARCHAR(20) DEFAULT 'received',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX idx_customers_certificate ON customers(certificate_no);
 CREATE INDEX idx_customers_mobile ON customers(mobile);
@@ -77,6 +89,9 @@ CREATE INDEX idx_extinguisher_customer ON extinguisher_details(customer_id);
 CREATE INDEX idx_extinguisher_type ON extinguisher_details(ext_type);
 CREATE INDEX idx_history_customer ON customer_history(customer_id);
 CREATE INDEX idx_history_action ON customer_history(action_type);
+CREATE INDEX idx_payments_customer ON payments(customer_id);
+CREATE INDEX idx_payments_date ON payments(payment_date);
+CREATE INDEX idx_payments_status ON payments(payment_status);
 
 -- Create default admin user
 -- Password: admin123 (bcrypt hash)
@@ -98,6 +113,7 @@ ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE extinguisher_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customer_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE backups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (allow all for authenticated users)
 CREATE POLICY "Allow all for authenticated users" ON users
@@ -113,4 +129,7 @@ CREATE POLICY "Allow all for authenticated users" ON customer_history
   FOR ALL USING (true);
 
 CREATE POLICY "Allow all for authenticated users" ON backups
+  FOR ALL USING (true);
+
+CREATE POLICY "Allow all for authenticated users" ON payments
   FOR ALL USING (true);

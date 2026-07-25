@@ -109,7 +109,7 @@ export default function CustomersPage() {
                 <tr>
                   <th>ID</th><th>Certificate No</th><th>Customer Name</th><th>Mobile</th>
                   <th>Issue Date</th><th>Expiry Date</th><th>Qty</th><th>Status</th>
-                  <th style={{ textAlign: 'center' }} colSpan={3}>Actions</th>
+                  <th style={{ textAlign: 'center' }} colSpan={4}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,10 +136,13 @@ export default function CustomersPage() {
                       <td style={{ width: 50, paddingLeft: 5 }}>
                         <button onClick={() => handleDelete(c.id)} className="action-btn btn-delete-action" title="Delete">🗑️</button>
                       </td>
+                      <td style={{ width: 50, paddingLeft: 5 }}>
+                        <Link href={`/customers/${c.id}/history`} className="action-btn btn-view-print" title="Service History" style={{ background: '#f0f9ff', color: '#0369a1' }}>📜</Link>
+                      </td>
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#64748b', fontWeight: 500 }}>Is Financial Year me koi bhi customer record nahi mila.</td></tr>
+                    <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, color: '#64748b', fontWeight: 500 }}>Is Financial Year me koi bhi customer record nahi mila.</td></tr>
                 )}
               </tbody>
             </table>

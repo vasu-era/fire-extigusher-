@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
 const menuItems = [
-  { href: '/dashboard', label: '📊 Dashboard' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/customers/new', label: '➕ New Customer' },
   { href: '/customers', label: '👥 Customer List' },
   { href: '/reports/expiry', label: '⏰ Expiry Due' },
   { href: '/reports/monthly', label: '📅 Monthly Report' },
+  { href: '/reports/revenue', label: '💰 Revenue Dashboard' },
+  { href: '/reports/whatsapp', label: '📱 WhatsApp Reminders' },
 ];
 
 export function Sidebar() {

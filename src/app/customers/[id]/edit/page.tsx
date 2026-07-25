@@ -52,7 +52,11 @@ export default function EditCustomerPage() {
   return (
     <div className="form-page">
       <div className="form-container">
-        <div className="logo-title"><h1>RAKESH GAS SUPPLIERS</h1><p>Fire Extinguisher Service Management System (Edit Mode)</p></div>
+        <div className="logo-title"><h1>RAKESH GAS SUPPLIERS</h1><p>Fire Extinguisher Service Management System (Edit Mode)</p>
+        <div style={{ marginTop: 10 }}>
+          <a href={`/customers/${id}/history`} className="add-btn">📜 View Service History</a>
+        </div>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-group"><label>Customer Name <span className="required">*</span></label><input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} required /></div>
