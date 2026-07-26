@@ -30,7 +30,7 @@ export default function MonthlyReportPage() {
   const [showCompare, setShowCompare] = useState(false);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/login'); }, [status, router]);
-  useEffect(() => { if (session) fetchReport(); }, [selectedFY, month, year, session]);
+  useEffect(() => { if (session) fetchReport(); }, [month, year, session]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -43,7 +43,7 @@ export default function MonthlyReportPage() {
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports/monthly?fy=${selectedFY}&month=${month}&year=${year}&type=${filterType}&status=${filterStatus}&event=${filterEvent}&search=${search}`);
+      const res = await fetch(`/api/reports/monthly?month=${month}&year=${year}&type=${filterType}&status=${filterStatus}&event=${filterEvent}&search=${search}`);
       if (res.ok) { const d = await res.json(); setAllCustomers(d.customers); }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -59,8 +59,6 @@ export default function MonthlyReportPage() {
     }
     return result;
   }, [allCustomers, sortBy, sortOrder]);
-
-  const fyDisplay = selectedFY === 'all' ? 'All Time' : `${2000 + parseInt(selectedFY.split('-')[0])}-${2000 + parseInt(selectedFY.split('-')[1])}`;
 
   const newCount = allCustomers.filter(c => !allCustomers.some(x => x.mobile === c.mobile && x.id < c.id)).length;
   const renewCount = allCustomers.length - newCount;

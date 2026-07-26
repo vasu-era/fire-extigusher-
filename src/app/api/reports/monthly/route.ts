@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getFYDates } from '@/lib/financial-year';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const fy = searchParams.get('fy') || 'all';
   const month = searchParams.get('month');
   const year = searchParams.get('year');
   const type = searchParams.get('type') || 'all';
   const status = searchParams.get('status') || 'all';
   const eventType = searchParams.get('event') || 'all';
   const search = searchParams.get('search') || '';
-
-  const { start_date, end_date } = getFYDates(fy);
 
   let query = supabaseAdmin
     .from('customers')
@@ -33,11 +29,6 @@ export async function GET(request: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todayStr = today.toISOString().split('T')[0];
-  const thirtyDaysLater = new Date();
-  thirtyDaysLater.setDate(today.getDate() + 30);
-  const thirtyDaysStr = thirtyDaysLater.toISOString().split('T')[0];
-
   let filtered = data || [];
 
   if (month && year) {
@@ -56,17 +47,6 @@ export async function GET(request: NextRequest) {
         (c.expiry_date >= monthStart && c.expiry_date <= monthEnd)
       );
     }
-
-    if (fy !== 'all') {
-      filtered = filtered.filter(c => {
-        const inFY = (date: string) => date >= start_date && date <= end_date;
-        if (eventType === 'service') return inFY(c.service_date);
-        if (eventType === 'expiry') return inFY(c.expiry_date);
-        return inFY(c.service_date) || inFY(c.expiry_date);
-      });
-    }
-  } else if (fy !== 'all') {
-    filtered = filtered.filter(c => c.service_date >= start_date && c.service_date <= end_date);
   }
 
   if (type === 'new') {
