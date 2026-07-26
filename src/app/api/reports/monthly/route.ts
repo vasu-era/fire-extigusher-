@@ -18,12 +18,6 @@ export async function GET(request: NextRequest) {
     .from('customers')
     .select('*, extinguisher_details(*)');
 
-  if (fy !== 'all') {
-    query = query
-      .gte('service_date', start_date)
-      .lte('service_date', end_date);
-  }
-
   if (search) {
     query = query.or(
       `customer_name.ilike.%${search}%,mobile.ilike.%${search}%,certificate_no.ilike.%${search}%`
@@ -62,6 +56,17 @@ export async function GET(request: NextRequest) {
         (c.expiry_date >= monthStart && c.expiry_date <= monthEnd)
       );
     }
+
+    if (fy !== 'all') {
+      filtered = filtered.filter(c => {
+        const inFY = (date: string) => date >= start_date && date <= end_date;
+        if (eventType === 'service') return inFY(c.service_date);
+        if (eventType === 'expiry') return inFY(c.expiry_date);
+        return inFY(c.service_date) || inFY(c.expiry_date);
+      });
+    }
+  } else if (fy !== 'all') {
+    filtered = filtered.filter(c => c.service_date >= start_date && c.service_date <= end_date);
   }
 
   if (type === 'new') {
