@@ -76,14 +76,6 @@ export async function GET(request: NextRequest) {
     .eq('is_active', true)
     .order('expiry_date', { ascending: true });
 
-  if (fy === 'others') {
-    notifQuery = notifQuery.or('expiry_date.is.null,expiry_date.eq.0000-00-00');
-  } else if (fy !== 'all') {
-    notifQuery = notifQuery
-      .gte('expiry_date', start_date)
-      .lte('expiry_date', end_date);
-  }
-
   const { data: notifData, error: notifError } = await notifQuery;
   if (notifError) {
     console.error('Notification query error:', notifError);
