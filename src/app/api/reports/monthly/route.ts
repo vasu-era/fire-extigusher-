@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabaseAdmin
     .from('customers')
-    .select('*, extinguisher_details(*)')
-    .eq('is_active', true);
+    .select('*, extinguisher_details(*)');
 
   if (fy !== 'all') {
     query = query
