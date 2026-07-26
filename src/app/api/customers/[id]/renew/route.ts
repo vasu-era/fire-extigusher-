@@ -107,5 +107,10 @@ export async function POST(
       new_values: { certificate_no: body.certificate_no, new_customer_id: newCustomer.id },
     });
 
+  await supabaseAdmin
+    .from('customers')
+    .update({ is_active: false })
+    .eq('id', parseInt(id));
+
   return NextResponse.json({ customer: newCustomer });
 }

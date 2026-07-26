@@ -28,7 +28,8 @@ export default function RenewCustomerPage() {
       if (res.ok) {
         const d = await res.json();
         setOldCertNo(d.oldCustomer.certificate_no);
-        setFormData({ customer_name: d.oldCustomer.customer_name, mobile: d.oldCustomer.mobile, address: d.oldCustomer.address || '', certificate_no: d.newCertificateNo, service_date: new Date().toISOString().split('T')[0], expiry_duration: 12, expiry_date: '', total_qty: d.oldCustomer.total_qty });
+        const todayStr = new Date().toISOString().split('T')[0];
+        setFormData({ customer_name: d.oldCustomer.customer_name, mobile: d.oldCustomer.mobile, address: d.oldCustomer.address || '', certificate_no: d.newCertificateNo, service_date: todayStr, expiry_duration: 12, expiry_date: calculateExpiryDate(todayStr, 12), total_qty: d.oldCustomer.total_qty });
         setExtinguishers(d.oldExtinguishers.map((ext: ExtinguisherDetail) => ({ id: String(ext.id), ext_type: ext.ext_type, ext_capacity: ext.ext_capacity, ext_qty: ext.ext_qty, service_action_type: ext.service_action_type, ext_refilling_price: ext.ext_refilling_price, ext_new_price: ext.ext_new_price })));
       }
     } catch (e) { console.error(e); } finally { setFetching(false); }
