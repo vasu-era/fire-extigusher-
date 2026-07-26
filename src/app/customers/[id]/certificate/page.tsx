@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function CertificatePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,26 @@ export default function CertificatePage() {
         <div className="cert-bottom"><b>THANK YOU FOR CHOOSING RAKESH GAS SUPPLIERS</b></div>
       </div>
 
-      <button className="no-print-btn no-print" onClick={() => window.print()}>🖨️ Print Certificate</button>
+      <div className="no-print no-print-btn" style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ background: '#64748b', color: 'white', border: 'none', padding: '12px 30px', borderRadius: 8, cursor: 'pointer', fontSize: 16, fontWeight: 'bold' }}
+        >
+          ← Back to Dashboard
+        </button>
+        <button
+          onClick={() => router.push('/customers')}
+          style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '12px 30px', borderRadius: 8, cursor: 'pointer', fontSize: 16, fontWeight: 'bold' }}
+        >
+          👥 Customer List
+        </button>
+        <button
+          onClick={() => window.print()}
+          style={{ background: '#0D47A1', color: 'white', border: 'none', padding: '12px 30px', borderRadius: 8, cursor: 'pointer', fontSize: 16, fontWeight: 'bold' }}
+        >
+          🖨️ Print Certificate
+        </button>
+      </div>
     </div>
   );
 }
