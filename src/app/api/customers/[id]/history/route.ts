@@ -21,7 +21,6 @@ export async function GET(
     .from('customers')
     .select('*, extinguisher_details(*)')
     .eq('mobile', current.mobile)
-    .eq('is_active', true)
     .order('service_date', { ascending: true });
 
   if (servicesError) {
