@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { TopNavbar } from '@/components/ui/TopNavbar';
 import { getCurrentFY } from '@/lib/financial-year';
-import { DashboardStats, Customer, Notification } from '@/types';
+import { DashboardStats, Customer } from '@/types';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -15,7 +15,6 @@ export default function DashboardPage() {
   const [selectedFY, setSelectedFY] = useState(getCurrentFY());
   const [stats, setStats] = useState<DashboardStats>({ total: 0, expiryDue: 0, expired: 0, monthlyCount: 0 });
   const [recentCustomers, setRecentCustomers] = useState<Customer[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +36,6 @@ export default function DashboardPage() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats({ total: statsData.total, expiryDue: statsData.expiryDue, expired: statsData.expired, monthlyCount: statsData.monthlyCount });
-        setNotifications(statsData.notifications || []);
       }
 
       if (customersRes.ok) {
@@ -54,9 +52,6 @@ export default function DashboardPage() {
   if (status === 'loading' || !session) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '18px' }}>Loading...</div>;
   }
-
-  const fyTitle = selectedFY === 'others' ? 'Unassigned' : selectedFY === 'all' ? 'All Time' : `20${selectedFY.split('-')[0]}-${selectedFY.split('-')[1]}`;
-  const currentMonthYear = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
@@ -127,43 +122,6 @@ export default function DashboardPage() {
                 </table>
               </div>
 
-              <div className="rgs-portal-card">
-                <div className="rgs-portal-header">
-                  <h3>Notifications (FY {fyTitle} - {currentMonthYear})</h3>
-                  {notifications.length > 0 && (
-                    <span className="portal-counter">{notifications.length}</span>
-                  )}
-                </div>
-
-                <div className="rgs-portal-body">
-                  {notifications.length > 0 ? (
-                    notifications.map((notif) => {
-                      const days = notif.days_left;
-                      const itemClass = days < 0 ? 'expired-item' : days === 0 ? 'today-item' : 'pending-item';
-                      const msgText = days < 0
-                        ? `Expired: ${notif.customer_name}`
-                        : days === 0
-                        ? `Expiring Today: ${notif.customer_name}`
-                        : `${notif.customer_name} (${days} Days left)`;
-
-                      return (
-                        <div key={notif.id} className={`rgs-portal-item ${itemClass}`}>
-                          <div className="item-left">
-                            <span className="status-dot"></span>
-                            <p className="notif-text" title={msgText}>{msgText}</p>
-                          </div>
-                          <button onClick={() => router.push(`/customers/${notif.id}/renew`)} className="action-btn-icon" title="Renew Customer">⚙️</button>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="portal-no-data">✅ Is FY {fyTitle} me is mahine ka koi pending un-renewed notification nahi hai.</div>
-                  )}
-                </div>
-                <div className="rgs-portal-footer">
-                  <Link href="/reports/monthly" className="show-more-link">Show All</Link>
-                </div>
-              </div>
             </div>
           </>
         )}

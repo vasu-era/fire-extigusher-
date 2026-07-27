@@ -69,40 +69,10 @@ export async function GET(request: NextRequest) {
     if (!serviceDate) return false;
     return serviceDate.getMonth() === currentMonth && serviceDate.getFullYear() === currentYear;
   }).length;
-
-  let notifQuery = supabaseAdmin
-    .from('customers')
-    .select('*')
-    .eq('is_active', true)
-    .order('expiry_date', { ascending: true });
-
-  const { data: notifData, error: notifError } = await notifQuery;
-  if (notifError) {
-    console.error('Notification query error:', notifError);
-  }
-  const allNotifCustomers = notifData || [];
-  console.log('FY:', fy, 'start:', start_date, 'end:', end_date, 'month:', currentMonth, 'year:', currentYear, 'notifCount:', allNotifCustomers.length);
-  const notifications = allNotifCustomers
-    .filter((c) => {
-      const exp = parseDate(c.expiry_date);
-      if (!exp) return false;
-      return exp.getMonth() === currentMonth && exp.getFullYear() === currentYear;
-    })
-    .slice(0, 20)
-    .map((c) => ({
-      id: c.id,
-      customer_name: c.customer_name,
-      certificate_no: c.certificate_no,
-      expiry_date: c.expiry_date,
-      days_left: Math.ceil((parseDate(c.expiry_date)!.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
-      mobile: c.mobile,
-    }));
-
   return NextResponse.json({
     total,
     expiryDue,
     expired,
     monthlyCount,
-    notifications,
   });
 }
