@@ -545,6 +545,64 @@ body {
     color: #0f172a;
 }
 
+.btn-primary-link {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.btn-primary-link:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.customer-insight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.customer-insight-card {
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.04);
+}
+
+.customer-insight-card:hover,
+.customer-insight-card.is-selected {
+    border-color: #2563eb;
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
+}
+
+.customer-insight-card span,
+.customer-insight-card small {
+    display: block;
+    color: #64748b;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.customer-insight-card strong {
+    display: block;
+    color: #0f172a;
+    font-size: 32px;
+    line-height: 1;
+    margin: 10px 0 8px;
+}
+
+.customer-insight-card.danger strong { color: #dc2626; }
+.customer-insight-card.warning strong { color: #d97706; }
+.customer-insight-card.success strong { color: #16a34a; }
+
 .search-panel {
     background: white;
     padding: 15px 30px;
@@ -562,7 +620,8 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 60%;
+    flex: 1;
+    min-width: 260px;
 }
 
 .search-input {
@@ -593,16 +652,34 @@ body {
     border: 1px solid #bfdbfe;
 }
 
+.sort-select {
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    outline: none;
+}
+
+.btn-clear-filter {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
 .table-card {
     background: white;
     border-radius: 16px;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
-    overflow: hidden;
+    overflow-x: auto;
     border: 1px solid #f1f5f9;
 }
 
 .table-card table {
     width: 100%;
+    min-width: 1180px;
     border-collapse: collapse;
     text-align: left;
 }
@@ -649,9 +726,45 @@ body {
 }
 
 .cust-name-bold {
+    display: block;
     font-weight: 600;
     color: #0f172a;
     font-size: 14.5px;
+}
+
+.customer-address-line {
+    display: block;
+    max-width: 240px;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact-link {
+    display: block;
+    color: #334155;
+    font-weight: 700;
+    text-decoration: none;
+    margin-bottom: 6px;
+}
+
+.contact-link:hover {
+    color: #2563eb;
+}
+
+.mini-whatsapp-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    text-decoration: none;
 }
 
 .status-tag {
@@ -698,6 +811,23 @@ body {
 .btn-edit-action:hover { background: #dbeafe; }
 .btn-delete-action { background: #fff5f5; color: #e11d48; }
 .btn-delete-action:hover { background: #ffe4e6; }
+.btn-renew-action { background: #fef3c7; color: #b45309; }
+.btn-renew-action:hover { background: #fde68a; }
+.btn-history-action { background: #f0f9ff; color: #0369a1; }
+.btn-history-action:hover { background: #e0f2fe; }
+
+.customer-action-stack {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 260px;
+}
+
+.customer-action-stack .action-btn {
+    padding: 7px 10px;
+    font-size: 12px;
+}
 
 /* =============================================
    CERTIFICATE (from certificate_new.php)
@@ -1258,5 +1388,46 @@ body {
     }
     .report-stats-grid {
         grid-template-columns: repeat(3, 1fr);
+    }
+    .custlist-container {
+        margin: 20px auto;
+        padding: 0 12px;
+    }
+    .header-panel,
+    .search-panel {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 18px;
+    }
+    .top-nav-btns {
+        flex-wrap: wrap;
+    }
+    .top-nav-btns .nav-btn,
+    .top-nav-btns .fy-select {
+        flex: 1;
+        min-width: 140px;
+        text-align: center;
+    }
+    .customer-insight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .customer-insight-card {
+        padding: 14px;
+    }
+    .customer-insight-card strong {
+        font-size: 26px;
+    }
+    .search-box-wrapper {
+        width: 100%;
+        min-width: 0;
+    }
+    .sort-select,
+    .btn-clear-filter,
+    .btn-excel,
+    .total-badge {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
     }
 }
