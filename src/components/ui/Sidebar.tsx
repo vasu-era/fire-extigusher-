@@ -8,6 +8,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/customers/new', label: '➕ New Customer' },
   { href: '/customers', label: '👥 Customer List' },
+  { href: '/reports/follow-up', label: '📋 Daily Follow-up' },
   { href: '/reports/expiry', label: '⏰ Expiry Due' },
   { href: '/reports/monthly', label: '📅 Monthly Report' },
   { href: '/reports/revenue', label: '💰 Revenue Dashboard' },

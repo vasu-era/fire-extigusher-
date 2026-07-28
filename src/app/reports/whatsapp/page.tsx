@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
-import { formatDate } from '@/lib/utils';
+import { formatDate, DEFAULT_WHATSAPP_TEMPLATE, getWhatsAppTemplate, setWhatsAppTemplate, getWhatsAppRenewalLink } from '@/lib/utils';
 
 interface ExpiringCustomer {
   id: number;
@@ -16,35 +16,15 @@ interface ExpiringCustomer {
   days_left: number;
 }
 
-const DEFAULT_TEMPLATE = `Dear {customer_name},
-
-Your fire extinguisher service certificate {certificate_no} is expiring on {expiry_date}.
-
-Please contact us to renew your fire extinguisher service to maintain fire safety compliance.
-
-Rakesh Gas Suppliers
-📞 93775 48793
-🌐 Junagadh, Gujarat`;
-
-function buildMessage(template: string, c: ExpiringCustomer): string {
-  return template
-    .replace(/\{customer_name\}/g, c.customer_name)
-    .replace(/\{certificate_no\}/g, c.certificate_no)
-    .replace(/\{expiry_date\}/g, formatDate(c.expiry_date))
-    .replace(/\{days_left\}/g, String(c.days_left));
-}
-
-function whatsappLink(mobile: string, message: string): string {
-  let cleanMobile = mobile.replace(/[^0-9]/g, '');
-  if (cleanMobile.length === 10) cleanMobile = '91' + cleanMobile;
-  return `https://wa.me/${cleanMobile}?text=${encodeURIComponent(message)}`;
-}
-
 export default function WhatsAppPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [days, setDays] = useState(30);
-  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [template, setTemplate] = useState(DEFAULT_WHATSAPP_TEMPLATE);
+
+  useEffect(() => {
+    setTemplate(getWhatsAppTemplate());
+  }, []);
   const [customers, setCustomers] = useState<ExpiringCustomer[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -86,8 +66,14 @@ export default function WhatsAppPage() {
   };
 
   const sendTo = (c: ExpiringCustomer) => {
-    const msg = buildMessage(template, c);
-    const link = whatsappLink(c.mobile, msg);
+    const link = getWhatsAppRenewalLink({
+      customer_name: c.customer_name,
+      certificate_no: c.certificate_no,
+      mobile: c.mobile,
+      expiry_date: formatDate(c.expiry_date),
+      days_left: c.days_left,
+      template,
+    });
     window.open(link, '_blank');
     setSent(new Set(sent).add(c.id));
   };
@@ -142,13 +128,13 @@ export default function WhatsAppPage() {
             <h3 className="text-lg font-bold text-gray-900 mb-3">✏️ Message Template</h3>
             <textarea
               value={template}
-              onChange={e => setTemplate(e.target.value)}
+              onChange={e => { setTemplate(e.target.value); setWhatsAppTemplate(e.target.value); }}
               rows={8}
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
             />
             <div className="flex justify-between items-center mt-3">
-              <p className="text-xs text-gray-500">Variables: {'{customer_name}'}, {'{certificate_no}'}, {'{expiry_date}'}, {'{days_left}'}</p>
-              <button onClick={() => setTemplate(DEFAULT_TEMPLATE)} className="text-sm text-blue-600 hover:underline">Reset to Default</button>
+              <p className="text-xs text-gray-500">Variables: {'{customer_name}'}, {'{certificate_no}'}, {'{expiry_date}'}, {'{days_left}'}, {'{timing}'}, {'{shop}'}</p>
+              <button onClick={() => { setTemplate(DEFAULT_WHATSAPP_TEMPLATE); setWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATE); }} className="text-sm text-blue-600 hover:underline">Reset to Default</button>
             </div>
           </div>
 

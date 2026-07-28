@@ -51,3 +51,60 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 2,
   }).format(amount);
 }
+
+const WHATSAPP_TEMPLATE_KEY = 'whatsapp-global-template-v1';
+
+export const DEFAULT_WHATSAPP_TEMPLATE = `Namaste {customer_name}, your fire extinguisher certificate {certificate_no} {timing} ({expiry_date}). Please contact {shop} for renewal.`;
+
+export function getWhatsAppTemplate(): string {
+  if (typeof window === 'undefined') return DEFAULT_WHATSAPP_TEMPLATE;
+  try {
+    const stored = localStorage.getItem(WHATSAPP_TEMPLATE_KEY);
+    return stored || DEFAULT_WHATSAPP_TEMPLATE;
+  } catch {
+    return DEFAULT_WHATSAPP_TEMPLATE;
+  }
+}
+
+export function setWhatsAppTemplate(template: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(WHATSAPP_TEMPLATE_KEY, template);
+}
+
+export function getWhatsAppRenewalLink(params: {
+  customer_name: string;
+  certificate_no: string;
+  mobile: string;
+  expiry_date: string;
+  days_left: number;
+  shop_name?: string;
+  shop_phone?: string;
+  template?: string;
+}): string {
+  const digits = params.mobile.replace(/\D/g, '');
+  const phone = digits.length > 10 ? digits.slice(-10) : digits;
+  if (!phone) return '#';
+
+  const expiryFormatted = new Date(params.expiry_date).toLocaleDateString('en-GB');
+  const timing =
+    params.days_left < 0
+      ? `expired ${Math.abs(params.days_left)} days ago`
+      : params.days_left === 0
+        ? 'expires today'
+        : `expires in ${params.days_left} days`;
+
+  const shop = params.shop_name || 'Rakesh Gas Suppliers';
+  const shopPhone = params.shop_phone || '9377548793';
+
+  const template = params.template || getWhatsAppTemplate();
+
+  const message = template
+    .replace(/\{customer_name\}/g, params.customer_name)
+    .replace(/\{certificate_no\}/g, params.certificate_no)
+    .replace(/\{expiry_date\}/g, expiryFormatted)
+    .replace(/\{timing\}/g, timing)
+    .replace(/\{days_left\}/g, String(params.days_left))
+    .replace(/\{shop\}/g, shop);
+
+  return `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+}

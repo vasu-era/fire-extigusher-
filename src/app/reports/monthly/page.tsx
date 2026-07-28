@@ -6,10 +6,30 @@ import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { TopNavbar } from '@/components/ui/TopNavbar';
 import { getCurrentFY } from '@/lib/financial-year';
-import { daysUntilExpiry, formatDate } from '@/lib/utils';
+import { daysUntilExpiry, formatDate, getWhatsAppRenewalLink } from '@/lib/utils';
 import { Customer } from '@/types';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
+
+type MonthlyCustomer = Customer & {
+  service_type?: 'new' | 'renew';
+  lifecycle_status?: 'current' | 'renewed';
+};
+
+function isCurrentCustomer(customer: MonthlyCustomer) {
+  return customer.is_active !== false;
+}
+
+function getMonthlyStatus(customer: MonthlyCustomer) {
+  if (!isCurrentCustomer(customer)) {
+    return { className: 'status-renewed', text: '🔄 Renewed / Closed', daysText: 'Closed' };
+  }
+
+  const days = daysUntilExpiry(customer.expiry_date);
+  if (days < 0) return { className: 'status-expired', text: '🔴 Expired', daysText: 'Expired' };
+  if (days <= 30) return { className: 'status-due', text: '🟡 Due', daysText: `${days} Days` };
+  return { className: 'status-active', text: '🟢 Active', daysText: `${days} Days` };
+}
 
 export default function MonthlyReportPage() {
   const { data: session, status } = useSession();
@@ -17,7 +37,7 @@ export default function MonthlyReportPage() {
   const [selectedFY, setSelectedFY] = useState(getCurrentFY());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<MonthlyCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -60,11 +80,11 @@ export default function MonthlyReportPage() {
     return result;
   }, [allCustomers, sortBy, sortOrder]);
 
-  const newCount = allCustomers.filter(c => !allCustomers.some(x => x.mobile === c.mobile && x.id < c.id)).length;
+  const newCount = allCustomers.filter(c => (c.service_type || (!allCustomers.some(x => x.mobile === c.mobile && x.id < c.id) ? 'new' : 'renew')) === 'new').length;
   const renewCount = allCustomers.length - newCount;
-  const activeCount = allCustomers.filter(c => daysUntilExpiry(c.expiry_date) > 30).length;
-  const dueCount = allCustomers.filter(c => { const d = daysUntilExpiry(c.expiry_date); return d >= 0 && d <= 30; }).length;
-  const expiredCount = allCustomers.filter(c => daysUntilExpiry(c.expiry_date) < 0).length;
+  const activeCount = allCustomers.filter(c => isCurrentCustomer(c) && daysUntilExpiry(c.expiry_date) > 30).length;
+  const dueCount = allCustomers.filter(c => { const d = daysUntilExpiry(c.expiry_date); return isCurrentCustomer(c) && d >= 0 && d <= 30; }).length;
+  const expiredCount = allCustomers.filter(c => isCurrentCustomer(c) && daysUntilExpiry(c.expiry_date) < 0).length;
   const totalRevenue = allCustomers.reduce((sum, c) => sum + (c.refilling_price || 0) + (c.new_bottle_price || 0), 0);
 
   const monthName = new Date(2000, month - 1, 1).toLocaleDateString('en-US', { month: 'long' });
@@ -72,7 +92,7 @@ export default function MonthlyReportPage() {
   const monthOverMonth = allCustomers.length;
   const expiringNext = allCustomers.filter(c => {
     const d = daysUntilExpiry(c.expiry_date);
-    return d >= 0 && d <= 7;
+    return isCurrentCustomer(c) && d >= 0 && d <= 7;
   });
 
   if (status === 'loading' || !session) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
@@ -95,7 +115,8 @@ export default function MonthlyReportPage() {
 
     const rows = dataToExport.map(c => {
       const days = daysUntilExpiry(c.expiry_date);
-      const isRenew = allCustomers.some(x => x.mobile === c.mobile && x.id < c.id);
+      const isRenew = (c.service_type || (allCustomers.some(x => x.mobile === c.mobile && x.id < c.id) ? 'renew' : 'new')) === 'renew';
+      const rowStatus = getMonthlyStatus(c);
       return {
         'Certificate No.': c.certificate_no,
         'Customer Name': c.customer_name,
@@ -104,8 +125,8 @@ export default function MonthlyReportPage() {
         'Address': c.address,
         'Issue Date': new Date(c.service_date).toLocaleDateString('en-GB'),
         'Expiry Date': new Date(c.expiry_date).toLocaleDateString('en-GB'),
-        'Days Left': days < 0 ? `Expired ${Math.abs(days)}d` : `${days} Days`,
-        'Status': days < 0 ? 'Expired' : days <= 30 ? 'Due' : 'Active',
+        'Days Left': rowStatus.daysText === 'Closed' ? 'Closed after renewal' : days < 0 ? `Expired ${Math.abs(days)}d` : `${days} Days`,
+        'Status': rowStatus.text.replace(/[🔄🔴🟡🟢]/g, '').trim(),
         'Qty': c.total_qty,
         'Payment Status': c.payment_status || 'pending',
       };
@@ -123,7 +144,8 @@ export default function MonthlyReportPage() {
     const headers = ['Certificate No', 'Customer Name', 'Type', 'Mobile', 'Address', 'Issue Date', 'Expiry Date', 'Days Left', 'Status'];
     const rows = customers.map(c => {
       const days = daysUntilExpiry(c.expiry_date);
-      const isRenew = allCustomers.some(x => x.mobile === c.mobile && x.id < c.id);
+      const isRenew = (c.service_type || (allCustomers.some(x => x.mobile === c.mobile && x.id < c.id) ? 'renew' : 'new')) === 'renew';
+      const rowStatus = getMonthlyStatus(c);
       return [
         c.certificate_no,
         c.customer_name,
@@ -132,8 +154,8 @@ export default function MonthlyReportPage() {
         c.address,
         new Date(c.service_date).toLocaleDateString('en-GB'),
         new Date(c.expiry_date).toLocaleDateString('en-GB'),
-        days < 0 ? `Expired ${Math.abs(days)}d` : `${days}d`,
-        days < 0 ? 'Expired' : days <= 30 ? 'Due' : 'Active',
+        rowStatus.daysText === 'Closed' ? 'Closed' : days < 0 ? `Expired ${Math.abs(days)}d` : `${days}d`,
+        rowStatus.text.replace(/[🔄🔴🟡🟢]/g, '').trim(),
       ];
     });
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
@@ -313,10 +335,8 @@ export default function MonthlyReportPage() {
                   <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40 }}>Loading...</td></tr>
                 ) : customers.length > 0 ? customers.map(c => {
                   const days = daysUntilExpiry(c.expiry_date);
-                  const statusClass = days < 0 ? 'status-expired' : days <= 30 ? 'status-due' : 'status-active';
-                  const statusText = days < 0 ? '🔴 Expired' : days <= 30 ? '🟡 Due' : '🟢 Active';
-                  const daysText = days < 0 ? `Expired` : `${days} Days`;
-                  const isRenew = allCustomers.some(x => x.mobile === c.mobile && x.id < c.id);
+                  const monthlyStatus = getMonthlyStatus(c);
+                  const isRenew = (c.service_type || (allCustomers.some(x => x.mobile === c.mobile && x.id < c.id) ? 'renew' : 'new')) === 'renew';
                   const typeClass = isRenew ? 'type-renew' : 'type-new';
                   const typeText = isRenew ? 'Renew 🔄' : 'New ➕';
 
@@ -334,7 +354,7 @@ export default function MonthlyReportPage() {
                     typeNote = <span className="job-tag" style={{ background: '#fff5f5', color: '#e11d48' }}>⚠️ Expiring This Month</span>;
                   }
 
-                  const renewLink = `https://wa.me/91${c.mobile}?text=${encodeURIComponent(`Dear ${c.customer_name}, your certificate ${c.certificate_no} is expiring on ${formatDate(c.expiry_date)}. Please contact us for renewal. - Rakesh Gas Suppliers, 9377548793`)}`;
+                  const renewLink = getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days });
 
                   return (
                     <tr key={c.id} style={{ background: selected.has(c.id) ? '#eff6ff' : '' }}>
@@ -350,15 +370,15 @@ export default function MonthlyReportPage() {
                       <td style={{ fontWeight: 500, color: '#475569' }}>📞 {c.mobile}</td>
                       <td>📅 {new Date(c.service_date).toLocaleDateString('en-GB')}</td>
                       <td>📅 {new Date(c.expiry_date).toLocaleDateString('en-GB')}</td>
-                      <td style={{ fontWeight: 600 }}>{daysText}</td>
-                      <td><span className={`status-tag ${statusClass}`}>{statusText}</span></td>
+                      <td style={{ fontWeight: 600 }}>{monthlyStatus.daysText}</td>
+                      <td><span className={`status-tag ${monthlyStatus.className}`}>{monthlyStatus.text}</span></td>
                       <td className="btn-action" style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
                           <Link href={`/customers/${c.id}/certificate`} target="_blank" className="print-btn-link" title="Print Certificate">🖨️</Link>
                           <Link href={`/customers/${c.id}/edit`} className="print-btn-link" title="Edit">✏️</Link>
                           <Link href={`/customers/${c.id}/history`} className="print-btn-link" title="History">📜</Link>
-                          {days <= 30 && <Link href={`/customers/${c.id}/renew`} className="print-btn-link" title="Renew" style={{ background: '#fee2e2', color: '#b91c1c' }}>🔄</Link>}
-                          <a href={renewLink} target="_blank" className="print-btn-link" title="WhatsApp" style={{ background: '#dcfce7', color: '#15803d', textDecoration: 'none' }}>📱</a>
+                          {isCurrentCustomer(c) && days <= 30 && <Link href={`/customers/${c.id}/renew`} className="print-btn-link" title="Renew" style={{ background: '#fee2e2', color: '#b91c1c' }}>🔄</Link>}
+                          {isCurrentCustomer(c) && <a href={renewLink} target="_blank" className="print-btn-link" title="WhatsApp" style={{ background: '#dcfce7', color: '#15803d', textDecoration: 'none' }}>📱</a>}
                         </div>
                       </td>
                     </tr>

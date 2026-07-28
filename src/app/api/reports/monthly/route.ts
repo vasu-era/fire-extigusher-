@@ -29,7 +29,12 @@ export async function GET(request: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let filtered = data || [];
+  const allRecords = data || [];
+  let filtered = allRecords.map((c: any) => ({
+    ...c,
+    service_type: allRecords.some((x: any) => x.mobile === c.mobile && x.id < c.id) ? 'renew' : 'new',
+    lifecycle_status: c.is_active === false ? 'renewed' : 'current',
+  }));
 
   if (month && year) {
     const monthNum = parseInt(month);
@@ -50,21 +55,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === 'new') {
-    filtered = filtered.filter(c => !filtered.some(x => x.mobile === c.mobile && x.id < c.id));
+    filtered = filtered.filter(c => c.service_type === 'new');
   } else if (type === 'renew') {
-    filtered = filtered.filter(c => filtered.some(x => x.mobile === c.mobile && x.id < c.id));
+    filtered = filtered.filter(c => c.service_type === 'renew');
   }
 
   if (status === 'active') {
-    filtered = filtered.filter(c => new Date(c.expiry_date) >= today);
+    filtered = filtered.filter(c => c.is_active !== false && new Date(c.expiry_date) >= today);
   } else if (status === 'due') {
     filtered = filtered.filter(c => {
+      if (c.is_active === false) return false;
       const exp = new Date(c.expiry_date);
       const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       return diff >= 0 && diff <= 30;
     });
   } else if (status === 'expired') {
-    filtered = filtered.filter(c => new Date(c.expiry_date) < today);
+    filtered = filtered.filter(c => c.is_active !== false && new Date(c.expiry_date) < today);
   }
 
   const totalRevenue = filtered.reduce((sum: number, c: any) => {
@@ -74,15 +80,16 @@ export async function GET(request: NextRequest) {
 
   const stats = {
     total: filtered.length,
-    newCustomers: filtered.filter(c => !filtered.some(x => x.mobile === c.mobile && x.id < c.id)).length,
-    renewed: filtered.filter(c => filtered.some(x => x.mobile === c.mobile && x.id < c.id)).length,
-    active: filtered.filter(c => new Date(c.expiry_date) >= today).length,
+    newCustomers: filtered.filter(c => c.service_type === 'new').length,
+    renewed: filtered.filter(c => c.service_type === 'renew').length,
+    active: filtered.filter(c => c.is_active !== false && new Date(c.expiry_date) >= today).length,
     due: filtered.filter(c => {
+      if (c.is_active === false) return false;
       const exp = new Date(c.expiry_date);
       const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       return diff >= 0 && diff <= 30;
     }).length,
-    expired: filtered.filter(c => new Date(c.expiry_date) < today).length,
+    expired: filtered.filter(c => c.is_active !== false && new Date(c.expiry_date) < today).length,
     totalRevenue: Math.round(totalRevenue),
   };
 

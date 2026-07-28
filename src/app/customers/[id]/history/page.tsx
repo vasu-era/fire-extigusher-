@@ -18,6 +18,7 @@ interface Service {
   service_revenue: number;
   ext_count: number;
   extinguisher_details: any[];
+  is_active: boolean;
 }
 
 export default function CustomerHistoryPage() {
@@ -58,6 +59,7 @@ export default function CustomerHistoryPage() {
   const { current, all_services, total_revenue, total_services, first_service_date } = data;
 
   const getStatusBadge = (service: Service) => {
+    if (service.is_active === false) return { text: '🔄 Renewed / Closed', color: '#1d4ed8', bg: '#dbeafe' };
     const days = daysUntilExpiry(service.expiry_date);
     if (days < 0) return { text: '🔴 Expired', color: '#b91c1c', bg: '#fee2e2' };
     if (days <= 30) return { text: '🟡 Expiring Soon', color: '#b45309', bg: '#fef3c7' };
@@ -72,7 +74,7 @@ export default function CustomerHistoryPage() {
 
   const latestService = all_services[all_services.length - 1];
   const latestDays = daysUntilExpiry(latestService.expiry_date);
-  const needsRenewal = latestDays <= 30;
+  const needsRenewal = latestService.is_active !== false && latestDays <= 30;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
@@ -81,7 +83,7 @@ export default function CustomerHistoryPage() {
         <div className="custlist-container">
           <div className="header-panel">
             <div>
-              <h2>📜 RENEWAL TIMELINE</h2>
+              <h2>Renewal History</h2>
               <p>{current.customer_name} • {current.mobile} • Total Services: {total_services} • Total Revenue: ₹{total_revenue.toLocaleString()}</p>
             </div>
             <div className="top-nav-btns" style={{ gap: 8 }}>
@@ -126,143 +128,107 @@ export default function CustomerHistoryPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-card p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">🔄 Service History Timeline</h3>
+          <div className="history-summary-grid">
+            <div className="history-summary-card">
+              <span>Total Services</span>
+              <strong>{total_services}</strong>
+            </div>
+            <div className="history-summary-card">
+              <span>Total Revenue</span>
+              <strong>₹{total_revenue.toLocaleString()}</strong>
+            </div>
+            <div className="history-summary-card">
+              <span>Latest Certificate</span>
+              <strong>{latestService.certificate_no}</strong>
+            </div>
+            <div className="history-summary-card">
+              <span>Latest Expiry</span>
+              <strong>{formatDate(latestService.expiry_date)}</strong>
+            </div>
+          </div>
 
-            <div style={{ position: 'relative', paddingLeft: 30 }}>
-              <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 2, background: '#e2e8f0' }}></div>
+          <div className="history-table-card">
+            <div className="history-table-header">
+              <div>
+                <h3>Service History</h3>
+                <p>All original and renewed certificates for this customer.</p>
+              </div>
+              <span>{all_services.length} records</span>
+            </div>
 
-              {all_services.map((service: Service, idx: number) => {
-                const status = getStatusBadge(service);
-                const typeBadge = getTypeBadge(idx, all_services.length);
-                const isLatest = idx === all_services.length - 1;
-                const isOldest = idx === 0;
-                const prevService = idx > 0 ? all_services[idx - 1] : null;
+            <div className="history-table-scroll">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Certificate</th>
+                    <th>Dates</th>
+                    <th>Status</th>
+                    <th>Extinguishers</th>
+                    <th>Revenue</th>
+                    <th>Link</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {all_services.map((service: Service, idx: number) => {
+                    const status = getStatusBadge(service);
+                    const typeBadge = getTypeBadge(idx, all_services.length);
+                    const isLatest = idx === all_services.length - 1;
+                    const isOldest = idx === 0;
+                    const prevService = idx > 0 ? all_services[idx - 1] : null;
+                    const nextService = !isLatest ? all_services[idx + 1] : null;
 
-                return (
-                  <div key={service.id} style={{ position: 'relative', marginBottom: 30, paddingLeft: 25 }}>
-                    <div style={{
-                      position: 'absolute', left: -22, top: 0, width: 20, height: 20,
-                      borderRadius: '50%', background: isLatest ? '#dc2626' : '#3b82f6',
-                      border: '3px solid white', boxShadow: '0 0 0 2px ' + (isLatest ? '#dc2626' : '#3b82f6')
-                    }}></div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border-l-4" style={{ borderLeftColor: isLatest ? '#dc2626' : '#3b82f6' }}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-bold text-gray-900 text-lg">📄 {service.certificate_no}</h4>
-                            <span style={{
-                              padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                              background: typeBadge.bg, color: typeBadge.color
-                            }}>
-                              {typeBadge.text}
-                            </span>
-                            <span style={{
-                              padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                              background: status.bg, color: status.color
-                            }}>
-                              {status.text}
-                            </span>
+                    return (
+                      <tr key={service.id} className={isLatest ? 'history-row-latest' : ''}>
+                        <td>
+                          <span className="history-service-number">#{idx + 1}</span>
+                          <span className="history-service-type" style={{ background: typeBadge.bg, color: typeBadge.color }}>{typeBadge.text}</span>
+                        </td>
+                        <td>
+                          <div className="history-cert-cell">
+                            <strong>{service.certificate_no}</strong>
+                            <small>{service.customer_name}</small>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Service Date: <b>{formatDate(service.service_date)}</b> • Expires: <b>{formatDate(service.expiry_date)}</b>
-                          </p>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <a
-                            href={`/customers/${service.id}/certificate`}
-                            target="_blank"
-                            className="action-btn btn-view-print"
-                            style={{ fontSize: 12, padding: '4px 10px' }}
-                          >
-                            👁️ View Certificate
-                          </a>
-                          {isLatest && needsRenewal && (
-                            <a
-                              href={`/customers/${service.id}/renew`}
-                              style={{
-                                background: '#dc2626', color: 'white', fontSize: 12, padding: '4px 10px',
-                                borderRadius: 6, fontWeight: 600, textDecoration: 'none'
-                              }}
-                            >
-                              🔄 Renew
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
-                        <div>
-                          <p className="text-gray-500">Status</p>
-                          <p style={{ color: status.color, fontWeight: 600 }}>{status.text}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Extinguishers</p>
-                          <p className="font-semibold">{service.ext_count} items ({service.total_qty} total)</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Service Revenue</p>
-                          <p className="font-semibold">₹{service.service_revenue.toLocaleString()}</p>
-                        </div>
-                      </div>
-
-                      {service.extinguisher_details && service.extinguisher_details.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <p className="text-xs text-gray-500 mb-1">Extinguisher Details:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {service.extinguisher_details.map((ext: any) => (
-                              <span key={ext.id} className="inline-block bg-white border border-gray-200 rounded px-2 py-1 text-xs">
-                                {ext.ext_type} {ext.ext_capacity} × {ext.ext_qty}
-                                {parseFloat(ext.ext_refilling_price) > 0 && <span style={{ color: '#15803d' }}> (₹{ext.ext_refilling_price})</span>}
-                                {parseFloat(ext.ext_new_price) > 0 && <span style={{ color: '#3b82f6' }}> (₹{ext.ext_new_price})</span>}
-                              </span>
-                            ))}
+                        </td>
+                        <td>
+                          <div className="history-date-stack">
+                            <span>Issued: <b>{formatDate(service.service_date)}</b></span>
+                            <span>Expiry: <b>{formatDate(service.expiry_date)}</b></span>
                           </div>
-                        </div>
-                      )}
-
-                      {isOldest && (
-                        <div className="mt-3 text-xs text-green-600 font-semibold">
-                          ⭐ First service — Customer started here
-                        </div>
-                      )}
-
-                      {!isOldest && prevService && (
-                        <div className="mt-3 text-xs flex items-center gap-2 flex-wrap">
-                          <span className="text-gray-500 italic">↑ Renewed from</span>
-                          <a
-                            href={`/customers/${prevService.id}/history`}
-                            style={{
-                              background: '#eff6ff', color: '#1e40af', padding: '2px 8px',
-                              borderRadius: 4, fontWeight: 600, textDecoration: 'none', fontFamily: 'monospace'
-                            }}
-                          >
-                            {prevService.certificate_no}
-                          </a>
-                          <span className="text-gray-400">on {formatDate(service.service_date)}</span>
-                        </div>
-                      )}
-
-                      {!isLatest && (
-                        <div className="mt-2 text-xs flex items-center gap-2 flex-wrap">
-                          <span className="text-gray-500 italic">↓ Superseded by</span>
-                          <a
-                            href={`/customers/${all_services[idx + 1].id}/history`}
-                            style={{
-                              background: '#f0fdf4', color: '#15803d', padding: '2px 8px',
-                              borderRadius: 4, fontWeight: 600, textDecoration: 'none', fontFamily: 'monospace'
-                            }}
-                          >
-                            {all_services[idx + 1].certificate_no}
-                          </a>
-                          <span className="text-gray-400">on {formatDate(all_services[idx + 1].service_date)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                        </td>
+                        <td>
+                          <span className="history-status-pill" style={{ background: status.bg, color: status.color }}>{status.text}</span>
+                        </td>
+                        <td>
+                          <div className="history-ext-stack">
+                            <b>{service.ext_count} type(s), {service.total_qty} total</b>
+                            <div className="history-ext-chips">
+                              {(service.extinguisher_details || []).map((ext: any) => (
+                                <span key={ext.id}>{ext.ext_type} {ext.ext_capacity} x {ext.ext_qty}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="history-revenue">₹{service.service_revenue.toLocaleString()}</td>
+                        <td>
+                          <div className="history-flow-cell">
+                            {isOldest && <span className="history-flow-chip start">First service</span>}
+                            {prevService && <span className="history-flow-chip">From {prevService.certificate_no}</span>}
+                            {nextService && <span className="history-flow-chip next">Renewed to {nextService.certificate_no}</span>}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="history-actions">
+                            <a href={`/customers/${service.id}/certificate`} target="_blank" className="action-btn btn-view-print">Certificate</a>
+                            {isLatest && needsRenewal && <a href={`/customers/${service.id}/renew`} className="action-btn btn-renew-action">Renew</a>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

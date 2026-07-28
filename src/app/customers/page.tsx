@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { getCurrentFY } from '@/lib/financial-year';
-import { daysUntilExpiry } from '@/lib/utils';
+import { daysUntilExpiry, getWhatsAppRenewalLink } from '@/lib/utils';
 import { Customer } from '@/types';
 import { FYOption } from '@/lib/financial-year';
 import Link from 'next/link';
@@ -25,16 +25,6 @@ function getStatus(days: number) {
   if (days <= 30) return { key: 'due' as const, className: 'status-due', label: days === 0 ? 'Due today' : `Due in ${days} days` };
   return { key: 'active' as const, className: 'status-active', label: `Active ${days} days` };
 }
-
-function getWhatsAppHref(customer: Customer, days: number) {
-  const digits = customer.mobile.replace(/\D/g, '');
-  const phone = digits.length > 10 ? digits.slice(-10) : digits;
-  const expiryText = formatDateSafe(customer.expiry_date);
-  const timing = days < 0 ? `expired ${Math.abs(days)} days ago` : days === 0 ? 'expires today' : `expires in ${days} days`;
-  const message = `Namaste ${customer.customer_name}, your fire extinguisher certificate ${customer.certificate_no} ${timing} (${expiryText}). Please contact Rakesh Gas Suppliers for renewal.`;
-  return phone ? `https://wa.me/91${phone}?text=${encodeURIComponent(message)}` : '#';
-}
-
 export default function CustomersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -207,7 +197,7 @@ export default function CustomersPage() {
                       </td>
                       <td>
                         <a href={`tel:${c.mobile}`} className="contact-link">📞 {c.mobile}</a>
-                        <a href={getWhatsAppHref(c, days)} target="_blank" rel="noreferrer" className="mini-whatsapp-link">WhatsApp</a>
+                        <a href={getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days })} target="_blank" rel="noreferrer" className="mini-whatsapp-link">WhatsApp</a>
                       </td>
                       <td>📅 {formatDateSafe(c.service_date)}</td>
                       <td>📅 {formatDateSafe(c.expiry_date)}</td>
