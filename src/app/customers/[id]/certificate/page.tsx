@@ -26,6 +26,8 @@ export default function CertificatePage() {
     setIsPrinting(true);
     setToast(null);
     try {
+      const customer = data?.customer;
+      const extinguishers = data?.extinguishers;
       const firstExt = extinguishers && extinguishers.length > 0 ? extinguishers[0] : null;
       const payload = {
         type: firstExt ? firstExt.ext_type : 'ABC TYPE',
@@ -189,7 +191,7 @@ export default function CertificatePage() {
         >
           {isPrinting ? (
             <>
-              <svg style={{ animate: 'spin 1s linear infinite', width: 20, height: 20 }} viewBox="0 0 24 24" fill="none">
+              <svg style={{ animation: 'spin 1s linear infinite', width: 20, height: 20 }} viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ opacity: 0.25 }} />
                 <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style={{ opacity: 0.75 }} />
               </svg>
