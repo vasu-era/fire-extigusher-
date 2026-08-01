@@ -10,6 +10,9 @@ export default function CertificatePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   useEffect(() => { fetchCert(); }, [id]);
 
   const fetchCert = async () => {
@@ -19,6 +22,38 @@ export default function CertificatePage() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
+  const handlePrintSticker = async () => {
+    setIsPrinting(true);
+    setToast(null);
+    try {
+      const firstExt = extinguishers && extinguishers.length > 0 ? extinguishers[0] : null;
+      const payload = {
+        type: firstExt ? firstExt.ext_type : 'ABC TYPE',
+        capacity: firstExt ? firstExt.ext_capacity : '4.5 KG',
+        refillDate: customer?.service_date || new Date().toISOString(),
+        expiryDate: customer?.expiry_date || new Date().toISOString(),
+      };
+
+      const res = await fetch(`/api/certificates/${id}/print`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success !== false) {
+        setToast({ type: 'success', message: result.message || 'Sticker Printed Successfully' });
+      } else {
+        setToast({ type: 'error', message: result.message ? `Printing Failed: ${result.message}` : 'Printing Failed' });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: `Printing Failed: ${err?.message || 'Network error'}` });
+    } finally {
+      setIsPrinting(false);
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
+
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading certificate...</div>;
   if (!data) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'red' }}>Certificate not found</div>;
 
@@ -26,6 +61,31 @@ export default function CertificatePage() {
 
   return (
     <div className="certificate-page">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 20,
+            right: 20,
+            zIndex: 9999,
+            backgroundColor: toast.type === 'success' ? '#10B981' : '#EF4444',
+            color: 'white',
+            padding: '14px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeIn 0.3s ease-in-out'
+          }}
+        >
+          <span>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       <div className="certificate">
         <img src="/water.jpg" className="watermark" />
 
@@ -110,7 +170,37 @@ export default function CertificatePage() {
         >
           🖨️ Print Certificate
         </button>
+        <button
+          onClick={handlePrintSticker}
+          disabled={isPrinting}
+          style={{
+            background: isPrinting ? '#93C5FD' : '#059669',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            borderRadius: 8,
+            cursor: isPrinting ? 'not-allowed' : 'pointer',
+            fontSize: 16,
+            fontWeight: 'bold',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8
+          }}
+        >
+          {isPrinting ? (
+            <>
+              <svg style={{ animate: 'spin 1s linear infinite', width: 20, height: 20 }} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ opacity: 0.25 }} />
+                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style={{ opacity: 0.75 }} />
+              </svg>
+              Printing...
+            </>
+          ) : (
+            '🏷️ Print Sticker'
+          )}
+        </button>
       </div>
     </div>
   );
 }
+
