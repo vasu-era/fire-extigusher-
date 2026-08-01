@@ -1,42 +1,126 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+
+type Customer = {
+  certificate_no: string;
+  customer_name: string;
+  mobile: string;
+  address?: string | null;
+  service_date: string;
+  expiry_date: string;
+  total_qty: number;
+};
+
+type Extinguisher = {
+  id: number;
+  ext_type: string;
+  ext_capacity: string;
+  ext_qty: number;
+};
+
+type CertificateData = {
+  customer: Customer;
+  extinguishers: Extinguisher[];
+  qrCodeUrl: string;
+};
+
+type StickerPrintRow = {
+  id: number;
+  type: string;
+  capacity: string;
+  quantity: number;
+  refillDate: string;
+  expiryDate: string;
+  certificateNo: string;
+  customerName: string;
+};
+
+const PRINT_SERVICE_URL = (
+  process.env.NEXT_PUBLIC_PRINT_SERVICE_URL || 'http://localhost:10000'
+).replace(/\/$/, '');
 
 export default function CertificatePage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CertificateData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [stickerQuantities, setStickerQuantities] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  useEffect(() => { fetchCert(); }, [id]);
-
-  const fetchCert = async () => {
+  const fetchCert = useCallback(async () => {
     try {
       const res = await fetch(`/api/certificate/${id}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); } finally { setLoading(false); }
+  }, [id]);
+
+  // Data fetch happens after route params are available.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchCert(); }, [fetchCert]);
+
+  const handlePrintSticker = () => {
+    const extinguishers = data?.extinguishers || [];
+    if (extinguishers.length === 0) {
+      setToast({ type: 'error', message: 'No extinguisher details found for sticker printing' });
+      setTimeout(() => setToast(null), 5000);
+      return;
+    }
+
+    const initialQuantities = extinguishers.reduce((acc: Record<string, number>, ext: Extinguisher) => {
+      acc[String(ext.id)] = Math.max(1, Number(ext.ext_qty) || 1);
+      return acc;
+    }, {});
+
+    setStickerQuantities(initialQuantities);
+    setPrintDialogOpen(true);
   };
 
-  const handlePrintSticker = async () => {
+  const submitStickerPrint = async () => {
     setIsPrinting(true);
     setToast(null);
     try {
       const customer = data?.customer;
-      const extinguishers = data?.extinguishers;
-      const firstExt = extinguishers && extinguishers.length > 0 ? extinguishers[0] : null;
+      const extinguishers = data?.extinguishers || [];
+      const stickers = extinguishers
+        .map((ext: Extinguisher): StickerPrintRow => ({
+          id: ext.id,
+          type: ext.ext_type,
+          capacity: ext.ext_capacity,
+          quantity: Math.max(0, Number(stickerQuantities[String(ext.id)]) || 0),
+          refillDate: customer?.service_date || new Date().toISOString(),
+          expiryDate: customer?.expiry_date || new Date().toISOString(),
+          certificateNo: customer?.certificate_no || '',
+          customerName: customer?.customer_name || '',
+        }))
+        .filter((sticker: StickerPrintRow) => sticker.quantity > 0);
+
+      if (stickers.length === 0) {
+        setToast({ type: 'error', message: 'Please enter at least one sticker quantity' });
+        setIsPrinting(false);
+        setTimeout(() => setToast(null), 5000);
+        return;
+      }
+
+      const firstSticker = stickers[0];
       const payload = {
-        type: firstExt ? firstExt.ext_type : 'ABC TYPE',
-        capacity: firstExt ? firstExt.ext_capacity : '4.5 KG',
+        certificateId: id,
+        certificateNo: customer?.certificate_no,
+        customerName: customer?.customer_name,
+        type: firstSticker.type,
+        capacity: firstSticker.capacity,
         refillDate: customer?.service_date || new Date().toISOString(),
         expiryDate: customer?.expiry_date || new Date().toISOString(),
+        quantity: stickers.reduce((total: number, sticker: StickerPrintRow) => total + sticker.quantity, 0),
+        stickers,
       };
 
-      const res = await fetch(`/api/certificates/${id}/print`, {
+      const res = await fetch(`${PRINT_SERVICE_URL}/api/certificates/${id}/print`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -45,11 +129,13 @@ export default function CertificatePage() {
       const result = await res.json();
       if (res.ok && result.success !== false) {
         setToast({ type: 'success', message: result.message || 'Sticker Printed Successfully' });
+        setPrintDialogOpen(false);
       } else {
         setToast({ type: 'error', message: result.message ? `Printing Failed: ${result.message}` : 'Printing Failed' });
       }
-    } catch (err: any) {
-      setToast({ type: 'error', message: `Printing Failed: ${err?.message || 'Network error'}` });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error';
+      setToast({ type: 'error', message: `Printing Failed: ${message}` });
     } finally {
       setIsPrinting(false);
       setTimeout(() => setToast(null), 5000);
@@ -88,17 +174,110 @@ export default function CertificatePage() {
         </div>
       )}
 
+      {printDialogOpen && (
+        <div
+          className="no-print"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9998,
+            background: 'rgba(15, 23, 42, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              width: 'min(620px, 100%)',
+              background: 'white',
+              borderRadius: 8,
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.25)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #e2e8f0' }}>
+              <h2 style={{ margin: 0, fontSize: 20, color: '#0f172a' }}>Print Sticker Quantity</h2>
+              <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 14 }}>
+                Enter how many stickers to print for each extinguisher.
+              </p>
+            </div>
+
+            <div style={{ padding: 22, maxHeight: '55vh', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>Type</th>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>Capacity</th>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>DB Qty</th>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>Print Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {extinguishers.map((ext: Extinguisher) => (
+                    <tr key={ext.id}>
+                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f1f5f9', color: '#0f172a' }}>{ext.ext_type}</td>
+                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f1f5f9', color: '#0f172a' }}>{ext.ext_capacity}</td>
+                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f1f5f9', color: '#0f172a' }}>{ext.ext_qty}</td>
+                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f1f5f9' }}>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={stickerQuantities[String(ext.id)] ?? 0}
+                          onChange={(event) => {
+                            const value = Math.max(0, Math.floor(Number(event.target.value) || 0));
+                            setStickerQuantities(prev => ({ ...prev, [String(ext.id)]: value }));
+                          }}
+                          style={{
+                            width: 96,
+                            padding: '8px 10px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: 6,
+                            fontSize: 15,
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => setPrintDialogOpen(false)}
+                disabled={isPrinting}
+                style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '10px 18px', borderRadius: 6, cursor: isPrinting ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitStickerPrint}
+                disabled={isPrinting}
+                style={{ background: isPrinting ? '#93C5FD' : '#059669', color: 'white', border: 'none', padding: '10px 18px', borderRadius: 6, cursor: isPrinting ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+              >
+                {isPrinting ? 'Printing...' : 'Print Stickers'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="certificate">
-        <img src="/water.jpg" className="watermark" />
+        <img src="/water.jpg" className="watermark" alt="" />
 
         <div className="cert-header">
-          <div className="logo-area"><img src="/logo.png" className="logo" /></div>
+          <div className="logo-area"><img src="/logo.png" className="logo" alt="Rakesh Gas Suppliers" /></div>
           <div className="cert-company">
             <h1>RAKESH GAS SUPPLIERS</h1>
             <p>Opp. Reliance Petrol Pump,<br />Rajkot Road, Dolatpara,<br />Junagadh - 362001</p>
             <p>Mobile : 93775 48793 | GST : 24AFVPA4036L1ZB</p>
           </div>
-          <div className="qr">{qrCodeUrl && <img src={qrCodeUrl} />}</div>
+          <div className="qr">{qrCodeUrl && <img src={qrCodeUrl} alt="Certificate QR code" />}</div>
         </div>
 
         <div className="cert-title">FIRE EXTINGUISHER CERTIFICATE</div>
@@ -136,7 +315,7 @@ export default function CertificatePage() {
         <table className="cert-details">
           <thead><tr><th style={{ width: '50%' }}>Type</th><th style={{ width: '25%' }}>Capacity</th><th style={{ width: '25%' }}>Qty</th></tr></thead>
           <tbody>
-            {extinguishers.map((ext: any) => (
+            {extinguishers.map((ext: Extinguisher) => (
               <tr key={ext.id}>
                 <td>{ext.ext_type}</td><td>{ext.ext_capacity}</td><td>{ext.ext_qty} Nos</td>
               </tr>
@@ -147,7 +326,7 @@ export default function CertificatePage() {
         <div className="total-box">TOTAL QUANTITY : {customer.total_qty} Nos</div>
 
         <div className="cert-footer">
-          <div className="signature"><img src="/sign.png" /><b>Authorized Signature</b></div>
+          <div className="signature"><img src="/sign.png" alt="Authorized signature" /><b>Authorized Signature</b></div>
         </div>
 
         <div className="cert-bottom"><b>THANK YOU FOR CHOOSING RAKESH GAS SUPPLIERS</b></div>

@@ -60,7 +60,10 @@ npm install
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    NEXTAUTH_SECRET=your-random-secret-min-32-chars
    NEXTAUTH_URL=http://localhost:3000
+   NEXT_PUBLIC_PRINT_SERVICE_URL=http://localhost:10000
    ```
+
+For sticker printing after deployment, run the local `print-service` on the Windows PC connected to the TSC TE244 printer. The deployed browser calls `NEXT_PUBLIC_PRINT_SERVICE_URL` directly, so the sticker CSV is saved on that PC at `fire-app/print-service/temp/sticker.csv`.
 
 ### 5. Run Development Server
 
