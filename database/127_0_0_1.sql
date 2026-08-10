@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `fire_system`
 --
-CREATE DATABASE IF NOT EXISTS `fire_system` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `fire_system`;
 
 -- --------------------------------------------------------
 
@@ -174,7 +172,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `password`) VALUES
-(1, 'admin', '202bf74c47440d2d47296170c087597c');
+(1, 'admin', '0192023a7bbd73250516f069df18b500');
 
 --
 -- Indexes for dumped tables
