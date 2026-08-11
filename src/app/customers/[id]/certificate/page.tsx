@@ -38,7 +38,7 @@ type StickerPrintRow = {
 };
 
 const PRINT_SERVICE_URL = (
-  process.env.NEXT_PUBLIC_PRINT_SERVICE_URL || 'http://localhost:10000'
+  process.env.NEXT_PUBLIC_PRINT_SERVICE_URL || ''
 ).replace(/\/$/, '');
 
 export default function CertificatePage() {
