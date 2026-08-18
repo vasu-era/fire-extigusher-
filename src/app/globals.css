@@ -816,6 +816,8 @@ body {
 .btn-renew-action:hover { background: #fde68a; }
 .btn-history-action { background: #f0f9ff; color: #0369a1; }
 .btn-history-action:hover { background: #e0f2fe; }
+.btn-close-action { background: #f3f4f6; color: #4b5563; }
+.btn-close-action:hover { background: #e5e7eb; color: #1f2937; }
 
 .customer-action-stack {
     display: flex;

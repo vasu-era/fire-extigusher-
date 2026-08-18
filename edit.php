@@ -75,7 +75,7 @@ $db_duration = !empty($row['expiry_duration']) ? $row['expiry_duration'] : '12';
             
             <div class="form-group">
                 <label>Certificate Number<span class="required">*</span></label>
-                <input type="text" id="certificate_no" name="certificate_no" value="<?php echo $row['certificate_no']; ?>" readonly required>
+                <input type="text" id="certificate_no" name="certificate_no" value="<?php echo $row['certificate_no']; ?>" required>
             </div>
             
             <!-- 📅 Issue Date -->

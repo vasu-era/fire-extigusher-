@@ -8,6 +8,7 @@ interface CustomerTableProps {
   customers: Customer[];
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
+  onClose?: (id: number) => void;
   onViewCertificate?: (id: number) => void;
   onRenew?: (id: number) => void;
   selectable?: boolean;
@@ -19,6 +20,7 @@ export function CustomerTable({
   customers,
   onEdit,
   onDelete,
+  onClose,
   onViewCertificate,
   onRenew,
   selectable = false,
@@ -139,11 +141,20 @@ export function CustomerTable({
                         🔄
                       </button>
                     )}
+                    {onClose && (
+                      <button
+                        onClick={() => onClose(customer.id)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded"
+                        title="Close Customer (No Renewal)"
+                      >
+                        🚫
+                      </button>
+                    )}
                     {onDelete && (
                       <button
                         onClick={() => onDelete(customer.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded"
-                        title="Delete"
+                        title="Delete Permanently"
                       >
                         🗑️
                       </button>

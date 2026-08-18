@@ -37,6 +37,14 @@ export default function EditCustomerPage() {
   const updateExt = (i: number, field: keyof ExtinguisherFormRow, val: any) => { const u = [...extinguishers]; u[i] = { ...u[i], [field]: val }; setExtinguishers(u); setFormData(prev => ({ ...prev, total_qty: u.reduce((s, e) => s + e.ext_qty, 0) })); };
   const removeExt = (i: number) => { if (extinguishers.length > 1) { const u = extinguishers.filter((_, idx) => idx !== i); setExtinguishers(u); setFormData(prev => ({ ...prev, total_qty: u.reduce((s, e) => s + e.ext_qty, 0) })); } };
 
+  const fetchCertNo = async () => {
+    if (!formData.service_date) return;
+    try {
+      const res = await fetch(`/api/next-certificate?service_date=${formData.service_date}`);
+      if (res.ok) { const d = await res.json(); setFormData(prev => ({ ...prev, certificate_no: d.certificate_no })); }
+    } catch (e) { console.error(e); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     try {
@@ -62,7 +70,35 @@ export default function EditCustomerPage() {
             <div className="form-group"><label>Customer Name <span className="required">*</span></label><input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} required /></div>
             <div className="form-group"><label>Mobile Number <span className="required">*</span></label><input type="tel" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} pattern="[0-9]{10}" maxLength={10} required /></div>
             <div className="form-group full-width"><label>Address <span className="required">*</span></label><textarea rows={2} value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} required /></div>
-            <div className="form-group"><label>Certificate Number <span className="required">*</span></label><input type="text" value={formData.certificate_no} readOnly required style={{ backgroundColor: '#f1f3f5', fontWeight: 'bold' }} /></div>
+            <div className="form-group">
+              <label>Certificate Number <span className="required">*</span> <span style={{ fontSize: '0.8em', color: '#6b7280', fontWeight: 'normal' }}>(Auto / Manual)</span></label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={formData.certificate_no}
+                  onChange={e => setFormData({ ...formData, certificate_no: e.target.value })}
+                  required
+                  style={{ fontWeight: 'bold', color: '#1f2937', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={fetchCertNo}
+                  title="Auto Generate Next Certificate Number"
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  🔄 Auto
+                </button>
+              </div>
+            </div>
             <div className="form-group"><label>Issue Date <span className="required">*</span></label><input type="date" value={formData.service_date} onChange={e => setFormData({ ...formData, service_date: e.target.value })} required /></div>
             <div className="form-group"><label>Validity Duration <span className="required">*</span></label>
               <select value={formData.expiry_duration} onChange={e => setFormData({ ...formData, expiry_duration: parseInt(e.target.value) })}>

@@ -39,6 +39,7 @@ export async function PUT(
   const { error: updateError } = await supabaseAdmin
     .from('customers')
     .update({
+      certificate_no: body.certificate_no,
       customer_name: body.customer_name,
       mobile: body.mobile,
       address: body.address,
@@ -97,19 +98,12 @@ export async function DELETE(
 
   const { error } = await supabaseAdmin
     .from('customers')
-    .update({ is_active: false })
+    .delete()
     .eq('id', id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  await supabaseAdmin
-    .from('customer_history')
-    .insert({
-      customer_id: parseInt(id),
-      action_type: 'delete',
-    });
 
   return NextResponse.json({ success: true });
 }

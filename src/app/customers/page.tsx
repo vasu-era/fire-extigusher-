@@ -60,8 +60,14 @@ export default function CustomersPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this customer?')) return;
+    if (!confirm('PERMANENTLY DELETE this customer entry?\n\nWarning: This will remove the record completely from all lists and monthly reports.')) return;
     await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    fetchCustomers();
+  };
+
+  const handleCloseCustomer = async (id: number) => {
+    if (!confirm('Close this customer without renewal?\n\nPast billing will remain in Monthly Sales Reports, but customer will be marked Closed and excluded from follow-up alerts.')) return;
+    await fetch(`/api/customers/${id}/close`, { method: 'POST' });
     fetchCustomers();
   };
 
@@ -209,7 +215,8 @@ export default function CustomersPage() {
                           {(status.key === 'due' || status.key === 'expired') && <Link href={`/customers/${c.id}/renew`} className="action-btn btn-renew-action" title="Renew">Renew</Link>}
                           <Link href={`/customers/${c.id}/edit`} className="action-btn btn-edit-action" title="Edit">Edit</Link>
                           <Link href={`/customers/${c.id}/history`} className="action-btn btn-history-action" title="Service History">History</Link>
-                          <button onClick={() => handleDelete(c.id)} className="action-btn btn-delete-action" title="Delete">Delete</button>
+                          <button onClick={() => handleCloseCustomer(c.id)} className="action-btn btn-close-action" title="Close Without Renewal">Close</button>
+                          <button onClick={() => handleDelete(c.id)} className="action-btn btn-delete-action" title="Delete Permanently">Delete</button>
                         </div>
                       </td>
                     </tr>

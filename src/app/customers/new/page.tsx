@@ -94,8 +94,34 @@ export default function NewCustomerPage() {
               <textarea rows={2} value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} required />
             </div>
             <div className="form-group">
-              <label>Certificate Number <span className="required">*</span></label>
-              <input type="text" value={formData.certificate_no} readOnly required style={{ backgroundColor: '#f1f3f5', fontWeight: 'bold', color: '#495057' }} />
+              <label>Certificate Number <span className="required">*</span> <span style={{ fontSize: '0.8em', color: '#6b7280', fontWeight: 'normal' }}>(Auto / Manual)</span></label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={formData.certificate_no}
+                  onChange={e => setFormData({ ...formData, certificate_no: e.target.value })}
+                  required
+                  placeholder="e.g. RGS/26-27/1"
+                  style={{ fontWeight: 'bold', color: '#1f2937', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={fetchCertNo}
+                  title="Auto Generate Next Certificate Number"
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  🔄 Auto
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label>Issue Date <span className="required">*</span></label>
