@@ -17,12 +17,12 @@ export function CertificateTemplate({ customer, extinguishers, qrCodeUrl }: Cert
         <img src="/water.jpg" alt="" className="watermark" />
 
         {/* Header */}
-        <div className="header">
+        <div className="cert-header">
           <div className="logo-area">
             <img src="/logo.png" alt="Logo" className="logo" />
           </div>
 
-          <div className="company">
+          <div className="cert-company">
             <h1>RAKESH GAS SUPPLIERS</h1>
             <p>
               Opp. Reliance Petrol Pump,<br />
@@ -38,7 +38,7 @@ export function CertificateTemplate({ customer, extinguishers, qrCodeUrl }: Cert
         </div>
 
         {/* Title */}
-        <div className="title">FIRE EXTINGUISHER CERTIFICATE</div>
+        <div className="cert-title">FIRE EXTINGUISHER CERTIFICATE</div>
 
         {/* Remarks */}
         <div className="remarks">
@@ -50,21 +50,21 @@ export function CertificateTemplate({ customer, extinguishers, qrCodeUrl }: Cert
         </div>
 
         {/* Customer Info Table */}
-        <table className="info">
+        <table className="cert-info">
           <tbody>
             <tr>
               <td style={{ width: '20%' }}><strong>Certificate No</strong></td>
               <td style={{ width: '30%' }}>{customer.certificate_no}</td>
               <td style={{ width: '20%' }}><strong>Issue Date</strong></td>
               <td style={{ width: '30%' }}>
-                {new Date(customer.service_date).toLocaleDateString('en-IN')}
+                {customer.service_date ? (customer.service_date.includes('-') ? customer.service_date.split('T')[0].split('-').reverse().join('/') : customer.service_date) : ''}
               </td>
             </tr>
             <tr>
               <td><strong>Customer Name</strong></td>
               <td>{customer.customer_name}</td>
               <td><strong>Expiry Date</strong></td>
-              <td>{new Date(customer.expiry_date).toLocaleDateString('en-IN')}</td>
+              <td>{customer.expiry_date ? (customer.expiry_date.includes('-') ? customer.expiry_date.split('T')[0].split('-').reverse().join('/') : customer.expiry_date) : ''}</td>
             </tr>
             <tr>
               <td><strong>Mobile</strong></td>
@@ -72,26 +72,26 @@ export function CertificateTemplate({ customer, extinguishers, qrCodeUrl }: Cert
             </tr>
             <tr>
               <td><strong>Address</strong></td>
-              <td colSpan={3}>{customer.address}</td>
+              <td colSpan={3}>{customer.address || '-'}</td>
             </tr>
           </tbody>
         </table>
 
         {/* Equipment Table */}
-        <table className="details">
+        <table className="cert-details">
           <thead>
             <tr>
-              <th style={{ width: '50%' }}>Type</th>
-              <th style={{ width: '25%' }}>Capacity</th>
-              <th style={{ width: '25%' }}>Qty</th>
+              <th style={{ width: '50%', textAlign: 'left', paddingLeft: '16px' }}>Type</th>
+              <th style={{ width: '25%', textAlign: 'center' }}>Capacity</th>
+              <th style={{ width: '25%', textAlign: 'center' }}>Qty</th>
             </tr>
           </thead>
           <tbody>
             {extinguishers.map((ext) => (
               <tr key={ext.id}>
-                <td>{ext.ext_type}</td>
-                <td>{ext.ext_capacity}</td>
-                <td>{ext.ext_qty} Nos</td>
+                <td style={{ textAlign: 'left', paddingLeft: '16px' }}>{ext.ext_type}</td>
+                <td style={{ textAlign: 'center' }}>{ext.ext_capacity}</td>
+                <td style={{ textAlign: 'center' }}>{ext.ext_qty} Nos</td>
               </tr>
             ))}
           </tbody>
@@ -103,14 +103,14 @@ export function CertificateTemplate({ customer, extinguishers, qrCodeUrl }: Cert
         </div>
 
         {/* Footer */}
-        <div className="footer">
+        <div className="cert-footer">
           <div className="signature">
             <img src="/sign.png" alt="Signature" />
             <strong>Authorized Signature</strong>
           </div>
         </div>
 
-        <div className="bottom">
+        <div className="cert-bottom">
           <strong>THANK YOU FOR CHOOSING RAKESH GAS SUPPLIERS</strong>
         </div>
       </div>

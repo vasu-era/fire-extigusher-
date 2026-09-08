@@ -293,13 +293,13 @@ export default function CertificatePage() {
               <td style={{ width: '20%' }}><b>Certificate No</b></td>
               <td style={{ width: '30%' }}>{customer.certificate_no}</td>
               <td style={{ width: '20%' }}><b>Issue Date</b></td>
-              <td style={{ width: '30%' }}>{new Date(customer.service_date).toLocaleDateString('en-GB')}</td>
+              <td style={{ width: '30%' }}>{customer.service_date ? (customer.service_date.includes('-') ? customer.service_date.split('T')[0].split('-').reverse().join('/') : customer.service_date) : ''}</td>
             </tr>
             <tr>
               <td><b>Customer Name</b></td>
               <td>{customer.customer_name}</td>
               <td><b>Expiry Date</b></td>
-              <td>{new Date(customer.expiry_date).toLocaleDateString('en-GB')}</td>
+              <td>{customer.expiry_date ? (customer.expiry_date.includes('-') ? customer.expiry_date.split('T')[0].split('-').reverse().join('/') : customer.expiry_date) : ''}</td>
             </tr>
             <tr>
               <td><b>Mobile</b></td>
@@ -307,17 +307,25 @@ export default function CertificatePage() {
             </tr>
             <tr>
               <td><b>Address</b></td>
-              <td colSpan={3}>{customer.address}</td>
+              <td colSpan={3}>{customer.address || '-'}</td>
             </tr>
           </tbody>
         </table>
 
         <table className="cert-details">
-          <thead><tr><th style={{ width: '50%' }}>Type</th><th style={{ width: '25%' }}>Capacity</th><th style={{ width: '25%' }}>Qty</th></tr></thead>
+          <thead>
+            <tr>
+              <th style={{ width: '50%', textAlign: 'left', paddingLeft: '16px' }}>Type</th>
+              <th style={{ width: '25%', textAlign: 'center' }}>Capacity</th>
+              <th style={{ width: '25%', textAlign: 'center' }}>Qty</th>
+            </tr>
+          </thead>
           <tbody>
             {extinguishers.map((ext: Extinguisher) => (
               <tr key={ext.id}>
-                <td>{ext.ext_type}</td><td>{ext.ext_capacity}</td><td>{ext.ext_qty} Nos</td>
+                <td style={{ textAlign: 'left', paddingLeft: '16px' }}>{ext.ext_type}</td>
+                <td style={{ textAlign: 'center' }}>{ext.ext_capacity}</td>
+                <td style={{ textAlign: 'center' }}>{ext.ext_qty} Nos</td>
               </tr>
             ))}
           </tbody>
