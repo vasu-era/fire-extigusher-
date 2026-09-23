@@ -225,7 +225,7 @@ export default function FollowUpPage() {
                               </td>
                               <td>
                                 <div className="followup-expiry-date">
-                                  {new Date(c.expiry_date).toLocaleDateString('en-GB')}
+                                  {formatDate(c.expiry_date)}
                                 </div>
                               </td>
                               <td>
@@ -245,7 +245,7 @@ export default function FollowUpPage() {
                                     Call
                                   </a>
                                   <a
-                                    href={getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: c.days_left })}
+                                    href={getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: c.days_left, total_qty: c.total_qty })}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="followup-action-btn followup-wa-btn"

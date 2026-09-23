@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { getCurrentFY } from '@/lib/financial-year';
-import { daysUntilExpiry, getWhatsAppRenewalLink } from '@/lib/utils';
+import { daysUntilExpiry, getWhatsAppRenewalLink, formatDate } from '@/lib/utils';
 import { Customer } from '@/types';
 import { FYOption } from '@/lib/financial-year';
 import Link from 'next/link';
@@ -17,7 +17,11 @@ type SortBy = 'latest' | 'expiryAsc' | 'nameAsc' | 'qtyDesc';
 function formatDateSafe(date: string) {
   if (!date) return '-';
   const parsed = new Date(date);
-  return isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString('en-GB');
+  if (isNaN(parsed.getTime())) return '-';
+  const d = String(parsed.getDate()).padStart(2, '0');
+  const m = String(parsed.getMonth() + 1).padStart(2, '0');
+  const y = parsed.getFullYear();
+  return `${d}-${m}-${y}`;
 }
 
 function getStatus(days: number) {
@@ -106,8 +110,8 @@ export default function CustomersPage() {
       'Customer Name': c.customer_name,
       'Mobile': c.mobile,
       'Address': c.address || '',
-      'Issue Date': new Date(c.service_date).toLocaleDateString('en-GB'),
-      'Expiry Date': new Date(c.expiry_date).toLocaleDateString('en-GB'),
+      'Issue Date': formatDate(c.service_date),
+      'Expiry Date': formatDate(c.expiry_date),
       'Status': getStatus(daysUntilExpiry(c.expiry_date)).label,
       'Total Qty': c.total_qty,
       'Payment Status': c.payment_status,
@@ -203,7 +207,7 @@ export default function CustomersPage() {
                       </td>
                       <td>
                         <a href={`tel:${c.mobile}`} className="contact-link">📞 {c.mobile}</a>
-                        <a href={getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days })} target="_blank" rel="noreferrer" className="mini-whatsapp-link">WhatsApp</a>
+                        <a href={getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days, total_qty: c.total_qty })} target="_blank" rel="noreferrer" className="mini-whatsapp-link">WhatsApp</a>
                       </td>
                       <td>📅 {formatDateSafe(c.service_date)}</td>
                       <td>📅 {formatDateSafe(c.expiry_date)}</td>

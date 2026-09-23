@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Customer } from '@/types';
-import { daysUntilExpiry } from '@/lib/utils';
+import { daysUntilExpiry, formatDate } from '@/lib/utils';
 
 interface CustomerTableProps {
   customers: Customer[];
@@ -93,10 +93,10 @@ export function CustomerTable({
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{customer.mobile}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(customer.service_date).toLocaleDateString('en-IN')}
+                  {formatDate(customer.service_date)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(customer.expiry_date).toLocaleDateString('en-IN')}
+                  {formatDate(customer.expiry_date)}
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold">{customer.total_qty}</td>
                 <td className="px-4 py-3">

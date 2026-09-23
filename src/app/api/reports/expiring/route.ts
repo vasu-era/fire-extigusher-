@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('customers')
-    .select('id, customer_name, mobile, certificate_no, service_date, expiry_date')
+    .select('id, customer_name, mobile, certificate_no, total_qty, service_date, expiry_date')
     .eq('is_active', true)
     .gte('expiry_date', todayStr)
     .lte('expiry_date', futureStr)

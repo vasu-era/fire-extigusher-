@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { Customer } from '@/types';
 import Link from 'next/link';
+import { formatDate } from '@/lib/utils';
 
 export default function ExpiryReportPage() {
   const { data: session, status } = useSession();
@@ -45,7 +46,7 @@ export default function ExpiryReportPage() {
                   <td>{c.certificate_no}</td>
                   <td>{c.customer_name}</td>
                   <td>{c.mobile}</td>
-                  <td>{new Date(c.expiry_date).toLocaleDateString('en-GB')}</td>
+                  <td>{formatDate(c.expiry_date)}</td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href={`/customers/${c.id}/certificate`} target="_blank" className="action-btn btn-view-print" style={{ marginRight: 5 }}>🖨️</Link>
                     <Link href={`/customers/${c.id}/renew`} className="action-btn btn-edit-action">🔄</Link>

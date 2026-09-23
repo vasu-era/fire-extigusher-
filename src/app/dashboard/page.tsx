@@ -8,6 +8,7 @@ import { TopNavbar } from '@/components/ui/TopNavbar';
 import { getCurrentFY } from '@/lib/financial-year';
 import { DashboardStats, Customer } from '@/types';
 import Link from 'next/link';
+import { formatDate } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -109,7 +110,7 @@ export default function DashboardPage() {
                             </div>
                           </td>
                           <td><span className="cert-badge">📄 {c.certificate_no}</span></td>
-                          <td><span>📅 {new Date(c.expiry_date).toLocaleDateString('en-GB')}</span></td>
+                          <td><span>📅 {formatDate(c.expiry_date)}</span></td>
                           <td style={{ textAlign: 'center' }}>
                             <Link href={`/customers/${c.id}/certificate`} target="_blank" className="table-view-btn">👁️ View</Link>
                           </td>

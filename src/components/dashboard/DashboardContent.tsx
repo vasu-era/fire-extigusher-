@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { DashboardStats, Notification } from '@/types';
+import { formatDate } from '@/lib/utils';
 
 interface DashboardContentProps {
   stats: DashboardStats;
@@ -54,7 +55,7 @@ export function DashboardContent({ stats, notifications, recentCustomers, select
                     </span>
                   </td>
                   <td className="py-4 px-2 text-sm">
-                     {new Date(customer.expiry_date).toLocaleDateString('en-IN')}
+                     {formatDate(customer.expiry_date)}
                   </td>
                   <td className="py-4 px-2 text-center">
                     <a

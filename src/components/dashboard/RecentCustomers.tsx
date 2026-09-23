@@ -1,6 +1,7 @@
 'use client';
 
 import { Customer } from '@/types';
+import { formatDate } from '@/lib/utils';
 
 interface RecentCustomersProps {
   customers: Customer[];
@@ -56,7 +57,7 @@ export function RecentCustomers({ customers, onViewAll, fy }: RecentCustomersPro
                   </span>
                 </td>
                 <td className="px-3 py-3 text-sm text-gray-600">
-                  📅 {new Date(customer.expiry_date).toLocaleDateString('en-IN')}
+                  📅 {formatDate(customer.expiry_date)}
                 </td>
                 <td className="px-3 py-3 text-center">
                   <a

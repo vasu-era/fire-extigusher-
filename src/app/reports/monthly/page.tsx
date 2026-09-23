@@ -123,8 +123,8 @@ export default function MonthlyReportPage() {
         'Type': isRenew ? 'Renew' : 'New',
         'Mobile': c.mobile,
         'Address': c.address,
-        'Issue Date': new Date(c.service_date).toLocaleDateString('en-GB'),
-        'Expiry Date': new Date(c.expiry_date).toLocaleDateString('en-GB'),
+        'Issue Date': formatDate(c.service_date),
+        'Expiry Date': formatDate(c.expiry_date),
         'Days Left': rowStatus.daysText === 'Closed' ? 'Closed after renewal' : days < 0 ? `Expired ${Math.abs(days)}d` : `${days} Days`,
         'Status': rowStatus.text.replace(/[🔄🔴🟡🟢]/g, '').trim(),
         'Qty': c.total_qty,
@@ -152,8 +152,8 @@ export default function MonthlyReportPage() {
         isRenew ? 'Renew' : 'New',
         c.mobile,
         c.address,
-        new Date(c.service_date).toLocaleDateString('en-GB'),
-        new Date(c.expiry_date).toLocaleDateString('en-GB'),
+        formatDate(c.service_date),
+        formatDate(c.expiry_date),
         rowStatus.daysText === 'Closed' ? 'Closed' : days < 0 ? `Expired ${Math.abs(days)}d` : `${days}d`,
         rowStatus.text.replace(/[🔄🔴🟡🟢]/g, '').trim(),
       ];
@@ -354,7 +354,7 @@ export default function MonthlyReportPage() {
                     typeNote = <span className="job-tag" style={{ background: '#fff5f5', color: '#e11d48' }}>⚠️ Expiring This Month</span>;
                   }
 
-                  const renewLink = getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days });
+                  const renewLink = getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days, total_qty: c.total_qty });
 
                   return (
                     <tr key={c.id} style={{ background: selected.has(c.id) ? '#eff6ff' : '' }}>
@@ -368,8 +368,8 @@ export default function MonthlyReportPage() {
                       </td>
                       <td><span className={`type-tag ${typeClass}`}>{typeText}</span></td>
                       <td style={{ fontWeight: 500, color: '#475569' }}>📞 {c.mobile}</td>
-                      <td>📅 {new Date(c.service_date).toLocaleDateString('en-GB')}</td>
-                      <td>📅 {new Date(c.expiry_date).toLocaleDateString('en-GB')}</td>
+                      <td>📅 {formatDate(c.service_date)}</td>
+                      <td>📅 {formatDate(c.expiry_date)}</td>
                       <td style={{ fontWeight: 600 }}>{monthlyStatus.daysText}</td>
                       <td><span className={`status-tag ${monthlyStatus.className}`}>{monthlyStatus.text}</span></td>
                       <td className="btn-action" style={{ textAlign: 'center' }}>

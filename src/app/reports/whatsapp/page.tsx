@@ -12,6 +12,7 @@ interface ExpiringCustomer {
   customer_name: string;
   mobile: string;
   certificate_no: string;
+  total_qty?: number;
   expiry_date: string;
   days_left: number;
 }
@@ -70,8 +71,9 @@ export default function WhatsAppPage() {
       customer_name: c.customer_name,
       certificate_no: c.certificate_no,
       mobile: c.mobile,
-      expiry_date: formatDate(c.expiry_date),
+      expiry_date: c.expiry_date,
       days_left: c.days_left,
+      total_qty: c.total_qty,
       template,
     });
     window.open(link, '_blank');
@@ -133,7 +135,7 @@ export default function WhatsAppPage() {
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
             />
             <div className="flex justify-between items-center mt-3">
-              <p className="text-xs text-gray-500">Variables: {'{customer_name}'}, {'{certificate_no}'}, {'{expiry_date}'}, {'{days_left}'}, {'{timing}'}, {'{shop}'}</p>
+              <p className="text-xs text-gray-500">Variables: {'{customer_name}'}, {'{certificate_no}'}, {'{total_qty}'}, {'{expiry_date}'}, {'{days_left}'}, {'{timing}'}, {'{shop}'}</p>
               <button onClick={() => { setTemplate(DEFAULT_WHATSAPP_TEMPLATE); setWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATE); }} className="text-sm text-blue-600 hover:underline">Reset to Default</button>
             </div>
           </div>
@@ -157,6 +159,7 @@ export default function WhatsAppPage() {
                     <th>Customer</th>
                     <th>Mobile</th>
                     <th>Certificate</th>
+                    <th>Qty</th>
                     <th>Expiry Date</th>
                     <th>Days Left</th>
                     <th>Status</th>
@@ -170,6 +173,7 @@ export default function WhatsAppPage() {
                       <td><b>{c.customer_name}</b></td>
                       <td>📞 {c.mobile}</td>
                       <td>📄 {c.certificate_no}</td>
+                      <td style={{ fontWeight: 600 }}>{c.total_qty ?? '-'} Nos</td>
                       <td>📅 {formatDate(c.expiry_date)}</td>
                       <td>
                         <span style={{

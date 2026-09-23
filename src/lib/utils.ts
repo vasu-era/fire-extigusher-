@@ -14,13 +14,17 @@ export function calculateExpiryDate(issue_date: string, duration_months: number)
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   
-  return `${month}/${day}/${year}`;
+  return `${day}-${month}-${year}`;
 }
 
 export function formatDate(date: string): string {
   if (!date) return '';
   const d = new Date(date);
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
 }
 
 export function formatDateDB(date: string): string {
@@ -52,15 +56,20 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-const WHATSAPP_TEMPLATE_KEY = 'whatsapp-global-template-v1';
+const WHATSAPP_TEMPLATE_KEY = 'whatsapp-global-template-v2';
 
-export const DEFAULT_WHATSAPP_TEMPLATE = `Namaste {customer_name}, your fire extinguisher certificate {certificate_no} {timing} ({expiry_date}). Please contact {shop} for renewal.`;
+export const DEFAULT_WHATSAPP_TEMPLATE = `Namaste {customer_name}, your fire extinguisher certificate {certificate_no} (Qty: {total_qty}) {timing} ({expiry_date}). Please contact {shop} for renewal.`;
 
 export function getWhatsAppTemplate(): string {
   if (typeof window === 'undefined') return DEFAULT_WHATSAPP_TEMPLATE;
   try {
     const stored = localStorage.getItem(WHATSAPP_TEMPLATE_KEY);
-    return stored || DEFAULT_WHATSAPP_TEMPLATE;
+    if (stored) return stored;
+    const oldStored = localStorage.getItem('whatsapp-global-template-v1');
+    if (oldStored && oldStored !== 'Namaste {customer_name}, your fire extinguisher certificate {certificate_no} {timing} ({expiry_date}). Please contact {shop} for renewal.') {
+      return oldStored;
+    }
+    return DEFAULT_WHATSAPP_TEMPLATE;
   } catch {
     return DEFAULT_WHATSAPP_TEMPLATE;
   }
@@ -77,6 +86,7 @@ export function getWhatsAppRenewalLink(params: {
   mobile: string;
   expiry_date: string;
   days_left: number;
+  total_qty?: number | string;
   shop_name?: string;
   shop_phone?: string;
   template?: string;
@@ -85,7 +95,7 @@ export function getWhatsAppRenewalLink(params: {
   const phone = digits.length > 10 ? digits.slice(-10) : digits;
   if (!phone) return '#';
 
-  const expiryFormatted = new Date(params.expiry_date).toLocaleDateString('en-GB');
+  const expiryFormatted = formatDate(params.expiry_date);
   const timing =
     params.days_left < 0
       ? `expired ${Math.abs(params.days_left)} days ago`
@@ -97,10 +107,13 @@ export function getWhatsAppRenewalLink(params: {
   const shopPhone = params.shop_phone || '9377548793';
 
   const template = params.template || getWhatsAppTemplate();
+  const qtyStr = params.total_qty !== undefined && params.total_qty !== null ? String(params.total_qty) : '';
 
   const message = template
     .replace(/\{customer_name\}/g, params.customer_name)
     .replace(/\{certificate_no\}/g, params.certificate_no)
+    .replace(/\{total_qty\}/g, qtyStr)
+    .replace(/\{qty\}/g, qtyStr)
     .replace(/\{expiry_date\}/g, expiryFormatted)
     .replace(/\{timing\}/g, timing)
     .replace(/\{days_left\}/g, String(params.days_left))

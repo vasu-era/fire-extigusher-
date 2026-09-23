@@ -1,5 +1,19 @@
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://suifyfqvqisebkkniiiw.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+const fs = require('fs');
+const path = require('path');
+
+const envPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const [key, ...vals] = line.split('=');
+    if (key && vals.length > 0) {
+      process.env[key.trim()] = vals.join('=').trim();
+    }
+  });
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://suifyfqvqisebkkniiiw.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const HEADERS = {
   'apikey': SUPABASE_KEY,
