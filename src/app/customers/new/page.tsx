@@ -55,17 +55,71 @@ export default function NewCustomerPage() {
     }
   };
 
+  const [gstin, setGstin] = useState('');
+  const [loadingGst, setLoadingGst] = useState(false);
+  const [gstFeedback, setGstFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  const handleGstLookup = async (gstToSearch?: string) => {
+    const target = (gstToSearch || gstin).trim().toUpperCase();
+    if (!target) return;
+    if (target.length !== 15) {
+      setGstFeedback({ type: 'error', message: 'GST number must be 15 characters long' });
+      return;
+    }
+    setLoadingGst(true);
+    setGstFeedback({ type: 'info', message: '🔍 Searching GST details...' });
+    try {
+      const res = await fetch(`/api/gst-lookup?gstin=${encodeURIComponent(target)}`);
+      const data = await res.json();
+      if (data.found) {
+        setFormData(prev => ({
+          ...prev,
+          customer_name: data.customer_name || prev.customer_name,
+          mobile: data.mobile || prev.mobile,
+          address: data.address || prev.address,
+        }));
+        setGstFeedback({
+          type: 'success',
+          message: data.source === 'database'
+            ? '✅ Existing customer found! Name, Mobile & Address auto-filled.'
+            : '✅ GST details found! Name & Address auto-filled. Please check Mobile Number.'
+        });
+      } else {
+        setGstFeedback({
+          type: 'info',
+          message: data.message || 'GST number verified. Please fill details once to save.'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setGstFeedback({ type: 'error', message: 'Failed to look up GST number' });
+    } finally {
+      setLoadingGst(false);
+    }
+  };
+
+  const handleGstChange = (val: string) => {
+    const upper = val.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    setGstin(upper);
+    if (upper.length === 15) {
+      handleGstLookup(upper);
+    } else {
+      setGstFeedback(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     try {
-      const expiryDB = formData.expiry_date.split('/');
-      const expiryFormatted = `${expiryDB[2]}-${expiryDB[0]}-${expiryDB[1]}`;
+      // calculateExpiryDate returns "DD-MM-YYYY" — convert to "YYYY-MM-DD" for Supabase
+      const expiryParts = formData.expiry_date.split('-');
+      const expiryFormatted = `${expiryParts[2]}-${expiryParts[1]}-${expiryParts[0]}`;
       const res = await fetch('/api/customers/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, expiry_date: expiryFormatted, extinguishers }),
+        body: JSON.stringify({ ...formData, gst_number: gstin, expiry_date: expiryFormatted, extinguishers }),
       });
       if (res.ok) { const d = await res.json(); router.push(`/customers/${d.customer.id}/certificate`); }
-      else alert('Error creating customer');
+      else { const err = await res.json(); alert(`Error: ${err.error || 'Failed to create customer'}`); }
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -81,6 +135,40 @@ export default function NewCustomerPage() {
 
         <form id="customerForm" onSubmit={handleSubmit}>
           <div className="form-grid">
+            <div className="form-group full-width" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '14px' }}>
+                  🏢 GST Number <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#15803d' }}>(Enter 15-digit GST to auto-fill Name, Address & Mobile)</span>
+                </label>
+                {loadingGst && <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>⏳ Searching...</span>}
+              </div>
+              <input
+                type="text"
+                value={gstin}
+                onChange={e => handleGstChange(e.target.value)}
+                placeholder="e.g. 24AAAAA0000A1Z5"
+                maxLength={15}
+                style={{
+                  textTransform: 'uppercase',
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  width: '100%',
+                  background: '#ffffff'
+                }}
+              />
+              {gstFeedback && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: gstFeedback.type === 'success' ? '#15803d' : gstFeedback.type === 'error' ? '#b91c1c' : '#1d4ed8'
+                }}>
+                  {gstFeedback.message}
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label>Customer Name <span className="required">*</span></label>
               <input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} required />
