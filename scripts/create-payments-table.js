@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(payment_status);
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS gst_number VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_customers_gst_number ON customers(gst_number);
 `;
 
 async function main() {

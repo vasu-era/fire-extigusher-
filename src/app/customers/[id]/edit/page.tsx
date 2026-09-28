@@ -18,6 +18,10 @@ export default function EditCustomerPage() {
   const [formData, setFormData] = useState({ customer_name: '', mobile: '', address: '', certificate_no: '', service_date: '', expiry_duration: 12, expiry_date: '', total_qty: 1 });
   const [extinguishers, setExtinguishers] = useState<ExtinguisherFormRow[]>([]);
 
+  const [gstin, setGstin] = useState('');
+  const [loadingGst, setLoadingGst] = useState(false);
+  const [gstFeedback, setGstFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
   useEffect(() => { if (status === 'unauthenticated') router.push('/login'); }, [status, router]);
   useEffect(() => { if (session) fetchCustomer(); }, [id, session]);
 
@@ -26,10 +30,67 @@ export default function EditCustomerPage() {
       const res = await fetch(`/api/customers/${id}`);
       if (res.ok) {
         const d = await res.json();
-        setFormData({ customer_name: d.customer.customer_name, mobile: d.customer.mobile, address: d.customer.address || '', certificate_no: d.customer.certificate_no, service_date: d.customer.service_date, expiry_duration: 12, expiry_date: d.customer.expiry_date, total_qty: d.customer.total_qty });
+        const rawAddr = d.customer.address || '';
+        const matchGst = rawAddr.match(/GSTIN:\s*([0-9A-Z]{15})/i) || rawAddr.match(/GST:\s*([0-9A-Z]{15})/i);
+        const cleanAddr = rawAddr
+          .replace(/GSTIN:\s*[0-9A-Z]{15}/gi, '')
+          .replace(/GST:\s*[0-9A-Z]{15}/gi, '')
+          .trim();
+        if (matchGst) setGstin(matchGst[1].toUpperCase());
+
+        setFormData({ customer_name: d.customer.customer_name, mobile: d.customer.mobile, address: cleanAddr, certificate_no: d.customer.certificate_no, service_date: d.customer.service_date, expiry_duration: 12, expiry_date: d.customer.expiry_date, total_qty: d.customer.total_qty });
         setExtinguishers(d.extinguishers.map((ext: ExtinguisherDetail) => ({ id: String(ext.id), ext_type: ext.ext_type, ext_capacity: ext.ext_capacity, ext_qty: ext.ext_qty, service_action_type: ext.service_action_type, ext_refilling_price: ext.ext_refilling_price, ext_new_price: ext.ext_new_price })));
       }
     } catch (e) { console.error(e); } finally { setFetching(false); }
+  };
+
+  const handleGstLookup = async (gstToSearch?: string) => {
+    const target = (gstToSearch || gstin).trim().toUpperCase();
+    if (!target) return;
+    if (target.length !== 15) {
+      setGstFeedback({ type: 'error', message: 'GST number must be 15 characters long' });
+      return;
+    }
+    setLoadingGst(true);
+    setGstFeedback({ type: 'info', message: '🔍 Searching GST details...' });
+    try {
+      const res = await fetch(`/api/gst-lookup?gstin=${encodeURIComponent(target)}`);
+      const data = await res.json();
+      if (data.found) {
+        setFormData(prev => ({
+          ...prev,
+          customer_name: data.customer_name || prev.customer_name,
+          mobile: data.mobile || prev.mobile,
+          address: data.address || prev.address,
+        }));
+        setGstFeedback({
+          type: 'success',
+          message: data.source === 'database'
+            ? '✅ Existing customer found! Name, Mobile & Address auto-filled.'
+            : '✅ GST details found! Name & Address auto-filled. Please check Mobile Number.'
+        });
+      } else {
+        setGstFeedback({
+          type: 'info',
+          message: data.message || 'GST number verified. Please fill details once to save.'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setGstFeedback({ type: 'error', message: 'Failed to look up GST number' });
+    } finally {
+      setLoadingGst(false);
+    }
+  };
+
+  const handleGstChange = (val: string) => {
+    const upper = val.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    setGstin(upper);
+    if (upper.length === 15) {
+      handleGstLookup(upper);
+    } else {
+      setGstFeedback(null);
+    }
   };
 
   useEffect(() => { if (formData.service_date && formData.expiry_duration) { setFormData(prev => ({ ...prev, expiry_date: calculateExpiryDate(formData.service_date, formData.expiry_duration) })); } }, [formData.service_date, formData.expiry_duration]);
@@ -50,7 +111,7 @@ export default function EditCustomerPage() {
     try {
       const expParts = formData.expiry_date.split('/');
       const expFormatted = `${expParts[2]}-${expParts[0]}-${expParts[1]}`;
-      const res = await fetch(`/api/customers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, expiry_date: expFormatted, extinguishers }) });
+      const res = await fetch(`/api/customers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, gst_number: gstin, expiry_date: expFormatted, extinguishers }) });
       if (res.ok) router.push('/customers'); else alert('Error');
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
@@ -67,6 +128,60 @@ export default function EditCustomerPage() {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
+            <div className="form-group full-width" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '14px' }}>
+                  🏢 GST Number <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#15803d' }}>(Enter 15-digit GST to auto-fill Name, Address & Mobile)</span>
+                </label>
+                {loadingGst && <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>⏳ Searching...</span>}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={gstin}
+                  onChange={e => handleGstChange(e.target.value)}
+                  placeholder="e.g. 24AAAAA0000A1Z5"
+                  maxLength={15}
+                  style={{
+                    textTransform: 'uppercase',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    flex: 1,
+                    background: '#ffffff'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleGstLookup()}
+                  disabled={loadingGst || !gstin}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: loadingGst || !gstin ? 'not-allowed' : 'pointer',
+                    fontSize: '13px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  🔍 Auto-Fill
+                </button>
+              </div>
+              {gstFeedback && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: gstFeedback.type === 'success' ? '#15803d' : gstFeedback.type === 'error' ? '#b91c1c' : '#1d4ed8'
+                }}>
+                  {gstFeedback.message}
+                </div>
+              )}
+            </div>
+
             <div className="form-group"><label>Customer Name <span className="required">*</span></label><input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} required /></div>
             <div className="form-group"><label>Mobile Number <span className="required">*</span></label><input type="tel" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} pattern="[0-9]{10}" maxLength={10} required /></div>
             <div className="form-group full-width"><label>Address <span className="required">*</span></label><textarea rows={2} value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} required /></div>

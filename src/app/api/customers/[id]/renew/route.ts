@@ -60,13 +60,19 @@ export async function POST(
   const { id } = await context.params;
   const body = await request.json();
 
+  let finalAddress = (body.address || '').trim();
+  const gst = (body.gst_number || '').trim().toUpperCase();
+  if (gst && !finalAddress.toUpperCase().includes(gst)) {
+    finalAddress = finalAddress ? `${finalAddress}\nGSTIN: ${gst}` : `GSTIN: ${gst}`;
+  }
+
   const { data: newCustomer, error: customerError } = await supabaseAdmin
     .from('customers')
     .insert({
       certificate_no: body.certificate_no,
       customer_name: body.customer_name,
       mobile: body.mobile,
-      address: body.address,
+      address: finalAddress,
       service_date: body.service_date,
       expiry_date: body.expiry_date,
       total_qty: body.total_qty,
