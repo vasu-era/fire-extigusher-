@@ -227,7 +227,7 @@ export default function NewCustomerPage() {
             </div>
             <div className="form-group">
               <label>Expiry Date <span className="required">*</span></label>
-              <input type="text" value={formData.expiry_date} readOnly required placeholder="MM/DD/YYYY" />
+              <input type="text" value={formData.expiry_date} readOnly required placeholder="DD-MM-YYYY" />
             </div>
 
             <div className="form-group full-width">

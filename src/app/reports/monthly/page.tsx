@@ -85,7 +85,10 @@ export default function MonthlyReportPage() {
   const activeCount = allCustomers.filter(c => isCurrentCustomer(c) && daysUntilExpiry(c.expiry_date) > 30).length;
   const dueCount = allCustomers.filter(c => { const d = daysUntilExpiry(c.expiry_date); return isCurrentCustomer(c) && d >= 0 && d <= 30; }).length;
   const expiredCount = allCustomers.filter(c => isCurrentCustomer(c) && daysUntilExpiry(c.expiry_date) < 0).length;
-  const totalRevenue = allCustomers.reduce((sum, c) => sum + (c.refilling_price || 0) + (c.new_bottle_price || 0), 0);
+  const totalRevenue = allCustomers.reduce((sum, c) => {
+    const exts = (c as any).extinguisher_details || [];
+    return sum + exts.reduce((s: number, e: any) => s + parseFloat(e.ext_refilling_price || 0) + parseFloat(e.ext_new_price || 0), 0);
+  }, 0);
 
   const monthName = new Date(2000, month - 1, 1).toLocaleDateString('en-US', { month: 'long' });
 
@@ -173,7 +176,12 @@ export default function MonthlyReportPage() {
       alert('Select customers first');
       return;
     }
-    router.push(`/reports/whatsapp?days=60`);
+    // Open WhatsApp for each selected customer
+    selectedCustomers.forEach(c => {
+      const days = daysUntilExpiry(c.expiry_date);
+      const link = getWhatsAppRenewalLink({ customer_name: c.customer_name, certificate_no: c.certificate_no, mobile: c.mobile, expiry_date: c.expiry_date, days_left: days, total_qty: c.total_qty });
+      window.open(link, '_blank');
+    });
   };
 
   return (
@@ -203,7 +211,7 @@ export default function MonthlyReportPage() {
               <div className="input-group">
                 <label>Year</label>
                 <select value={year} onChange={e => setYear(parseInt(e.target.value))}>
-                  {[2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
+                  {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               <div className="input-group">

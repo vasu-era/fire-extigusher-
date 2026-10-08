@@ -65,13 +65,15 @@ export default function CustomersPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('PERMANENTLY DELETE this customer entry?\n\nWarning: This will remove the record completely from all lists and monthly reports.')) return;
-    await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(`Delete failed: ${d.error || res.statusText}`); return; }
     fetchCustomers();
   };
 
   const handleCloseCustomer = async (id: number) => {
     if (!confirm('Close this customer without renewal?\n\nPast billing will remain in Monthly Sales Reports, but customer will be marked Closed and excluded from follow-up alerts.')) return;
-    await fetch(`/api/customers/${id}/close`, { method: 'POST' });
+    const res = await fetch(`/api/customers/${id}/close`, { method: 'POST' });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(`Close failed: ${d.error || res.statusText}`); return; }
     fetchCustomers();
   };
 

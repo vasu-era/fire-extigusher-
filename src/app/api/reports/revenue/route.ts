@@ -18,10 +18,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: custError.message }, { status: 500 });
   }
 
-  const { data: payments, error: payError } = await supabaseAdmin
-    .from('payments')
-    .select('*');
-
   let totalRevenue = 0;
   let refillingRevenue = 0;
   let newSalesRevenue = 0;
@@ -39,7 +35,7 @@ export async function GET(request: NextRequest) {
       const month = c.service_date.substring(0, 7);
       monthlyData[month] = (monthlyData[month] || 0) + price;
 
-      if (typeData.hasOwnProperty(ext.ext_type)) {
+      if (Object.prototype.hasOwnProperty.call(typeData, ext.ext_type)) {
         typeData[ext.ext_type] += price;
       }
     });
@@ -58,20 +54,23 @@ export async function GET(request: NextRequest) {
     percentage: Math.round((revenue / totalTypeRevenue) * 100),
   })).filter(t => t.revenue > 0);
 
-  const pendingPayments = totalRevenue - refillingRevenue - newSalesRevenue;
+  // payments table is optional; gracefully skip if it doesn't exist
   let actualReceived = 0;
   let actualPending = 0;
-  (payments || []).forEach((p: any) => {
-    const amt = parseFloat(p.amount || 0);
-    if (p.payment_status === 'received') actualReceived += amt;
-    else actualPending += amt;
-  });
+  try {
+    const { data: payments } = await supabaseAdmin.from('payments').select('*');
+    (payments || []).forEach((p: any) => {
+      const amt = parseFloat(p.amount || 0);
+      if (p.payment_status === 'received') actualReceived += amt;
+      else actualPending += amt;
+    });
+  } catch (_) { /* payments table doesn't exist yet */ }
 
   return NextResponse.json({
     totalRevenue: Math.round(totalRevenue),
     refillingRevenue: Math.round(refillingRevenue),
     newSalesRevenue: Math.round(newSalesRevenue),
-    pendingPayments: Math.round(actualPending || 0),
+    pendingPayments: Math.round(actualPending),
     actualReceived: Math.round(actualReceived),
     totalCustomers: (customers || []).length,
     monthlyTrend,

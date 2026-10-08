@@ -20,8 +20,8 @@ export async function POST(
     .from('customer_history')
     .insert({
       customer_id: parseInt(id),
-      action_type: 'close',
-      new_values: { status: 'closed' },
+      action_type: 'update',
+      new_values: { status: 'closed', is_active: false },
     });
 
   return NextResponse.json({ success: true });
