@@ -109,10 +109,18 @@ export default function EditCustomerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     try {
-      const expParts = formData.expiry_date.split('/');
-      const expFormatted = `${expParts[2]}-${expParts[0]}-${expParts[1]}`;
+      // expiry_date from calculateExpiryDate() is DD-MM-YYYY; convert to YYYY-MM-DD for DB
+      const expParts = formData.expiry_date.split('-');
+      const expFormatted = expParts.length === 3
+        ? `${expParts[2]}-${expParts[1]}-${expParts[0]}`
+        : formData.expiry_date;
       const res = await fetch(`/api/customers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, gst_number: gstin, expiry_date: expFormatted, extinguishers }) });
-      if (res.ok) router.push('/customers'); else alert('Error');
+      if (res.ok) {
+        router.push('/customers');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Error: ${errData.error || res.statusText || 'Failed to update customer'}`);
+      }
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 

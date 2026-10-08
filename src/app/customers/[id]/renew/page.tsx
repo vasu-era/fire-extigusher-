@@ -51,10 +51,19 @@ export default function RenewCustomerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     try {
-      const expParts = formData.expiry_date.split('/');
-      const expFormatted = `${expParts[2]}-${expParts[0]}-${expParts[1]}`;
+      // expiry_date from calculateExpiryDate() is DD-MM-YYYY; convert to YYYY-MM-DD for DB
+      const expParts = formData.expiry_date.split('-');
+      const expFormatted = expParts.length === 3
+        ? `${expParts[2]}-${expParts[1]}-${expParts[0]}`
+        : formData.expiry_date;
       const res = await fetch(`/api/customers/${id}/renew`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, expiry_date: expFormatted, extinguishers, old_certificate_no: oldCertNo }) });
-      if (res.ok) { const d = await res.json(); router.push(`/customers/${d.customer.id}/certificate`); } else alert('Error');
+      if (res.ok) {
+        const d = await res.json();
+        router.push(`/customers/${d.customer.id}/certificate`);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Error: ${errData.error || res.statusText || 'Failed to renew customer'}`);
+      }
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
