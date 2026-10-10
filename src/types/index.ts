@@ -90,7 +90,7 @@ export interface CapacityOption {
 
 export const CAPACITY_OPTIONS: CapacityOption[] = [
   { type: 'ABC', capacities: ['1 KG', '2 KG', '4 KG', '6 KG', '9 KG', '25 KG', '50 KG'] },
-  { type: 'CO2', capacities: ['2 KG', '3 KG', '4.5 KG', '6.5 KG', '22.5 KG'] },
+  { type: 'CO2', capacities: ['2 KG', '3 KG', '4.5 KG', '6.5 KG', '22.5 KG', '45 KG'] },
   { type: 'Water', capacities: ['6 LTR', '9 LTR'] },
   { type: 'Foam', capacities: ['6 LTR', '9 LTR', '50 LTR'] },
 ];

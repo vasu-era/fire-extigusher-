@@ -58,7 +58,7 @@ function updateCapacity(select){
         options = ["1 KG","2 KG","4 KG","6 KG","9 KG","25 KG","50 KG"];
     }
     else if(select.value === "CO2"){
-        options = ["2 KG","3 KG","4.5 KG","6.5 KG","22.5 KG"];
+        options = ["2 KG","3 KG","4.5 KG","6.5 KG","22.5 KG","45 KG"];
     }
     else if(select.value === "Water"){
         options = ["6 LTR","9 LTR"];
