@@ -24,6 +24,8 @@ type CertificateData = {
   customer: Customer;
   extinguishers: Extinguisher[];
   qrCodeUrl: string;
+  shareToken: string;
+  shareUrl: string;
 };
 
 type StickerPrintRow = {
@@ -152,7 +154,7 @@ export default function CertificatePage() {
     // Add India country code if not already present
     const mobile = rawMobile.startsWith('+') ? rawMobile.replace('+', '') : `91${rawMobile}`;
 
-    const certLink = typeof window !== 'undefined' ? window.location.href : '';
+    const certLink = data.shareUrl || window.location.href;
     const waMessage = `Dear ${customer.customer_name},\n\nYour Fire Extinguisher Service Certificate is ready!\n\n📄 *Certificate No:* ${customer.certificate_no}\n🔗 *View Certificate:* ${certLink}\n\nPDF is also attached with this message.\n\nThank you for choosing Rakesh Gas Suppliers. 🔥`;
     const fileName = `Certificate_${customer.certificate_no || customer.customer_name}.pdf`;
 
