@@ -152,7 +152,8 @@ export default function CertificatePage() {
     // Add India country code if not already present
     const mobile = rawMobile.startsWith('+') ? rawMobile.replace('+', '') : `91${rawMobile}`;
 
-    const message = `Dear ${customer.customer_name}, please find your Fire Extinguisher Service Certificate (${customer.certificate_no}) attached. Thank you for choosing Rakesh Gas Suppliers.`;
+    const waMessage = `Dear ${customer.customer_name}, please find your Fire Extinguisher Service Certificate (${customer.certificate_no}) attached. Thank you for choosing Rakesh Gas Suppliers.`;
+    const fileName = `Certificate_${customer.certificate_no || customer.customer_name}.pdf`;
 
     setIsWhatsAppLoading(true);
     setToast({ type: 'success', message: '📄 Generating PDF, please wait...' });
@@ -166,23 +167,50 @@ export default function CertificatePage() {
 
       const opt = {
         margin: 0,
-        filename: `Certificate_${customer.certificate_no || customer.customer_name}.pdf`,
+        filename: fileName,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm' as const, format: 'a4', orientation: 'portrait' as const },
       };
 
-      await html2pdf().set(opt).from(element).save();
+      // Generate PDF as Blob
+      const pdfBlob: Blob = await html2pdf().set(opt).from(element).outputPdf('blob');
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      setToast({ type: 'success', message: '✅ PDF downloaded! Now opening WhatsApp — please attach the PDF.' });
-      setTimeout(() => setToast(null), 6000);
+      // 📱 MOBILE: Use Web Share API — shares PDF directly to WhatsApp
+      const canShareFiles = navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] });
 
-      // Open WhatsApp Web with pre-filled message
-      const waUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`;
-      window.open(waUrl, '_blank');
+      if (canShareFiles) {
+        setToast({ type: 'success', message: '📤 Opening share menu — select WhatsApp to send PDF!' });
+        setTimeout(() => setToast(null), 6000);
+        await navigator.share({
+          title: `Fire Certificate - ${customer.customer_name}`,
+          text: waMessage,
+          files: [pdfFile],
+        });
+      } else {
+        // 🖥️ DESKTOP FALLBACK: Download PDF + open WhatsApp Web
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        setToast({ type: 'success', message: '✅ PDF downloaded! Opening WhatsApp — attach the PDF and send.' });
+        setTimeout(() => setToast(null), 7000);
+
+        const waUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(waMessage)}`;
+        window.open(waUrl, '_blank');
+      }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to generate PDF';
-      setToast({ type: 'error', message: `WhatsApp Error: ${message}` });
+      // User cancelled share — not an error
+      if (err instanceof Error && err.name === 'AbortError') {
+        setToast(null);
+        return;
+      }
+      const errMsg = err instanceof Error ? err.message : 'Failed to generate PDF';
+      setToast({ type: 'error', message: `WhatsApp Error: ${errMsg}` });
       setTimeout(() => setToast(null), 5000);
     } finally {
       setIsWhatsAppLoading(false);
