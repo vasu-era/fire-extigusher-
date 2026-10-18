@@ -180,15 +180,19 @@ export default function CertificatePage() {
       const pdfBlob: Blob = await html2pdf().set(opt).from(element).outputPdf('blob');
       const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      // 📱 MOBILE: Use Web Share API — shares PDF directly to WhatsApp
+      // Detect mobile device
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // 📱 MOBILE: Use Web Share API — shares PDF directly via share sheet
       const canShareFiles =
+        isMobile &&
         typeof navigator !== 'undefined' &&
         'share' in navigator &&
         'canShare' in navigator &&
         navigator.canShare({ files: [pdfFile] });
 
       if (canShareFiles) {
-        setToast({ type: 'success', message: '📤 Opening share menu — select WhatsApp to send PDF!' });
+        setToast({ type: 'success', message: '📤 Opening WhatsApp — select the chat to send PDF!' });
         setTimeout(() => setToast(null), 6000);
         await navigator.share({
           title: `Fire Certificate - ${customer.customer_name}`,
@@ -196,7 +200,7 @@ export default function CertificatePage() {
           files: [pdfFile],
         });
       } else {
-        // 🖥️ DESKTOP FALLBACK: Download PDF + open WhatsApp Web
+        // 🖥️ DESKTOP: Download PDF + directly open customer's WhatsApp chat
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -204,9 +208,10 @@ export default function CertificatePage() {
         a.click();
         URL.revokeObjectURL(url);
 
-        setToast({ type: 'success', message: '✅ PDF downloaded! Opening WhatsApp — attach the PDF and send.' });
+        setToast({ type: 'success', message: '✅ PDF downloaded! Opening WhatsApp chat...' });
         setTimeout(() => setToast(null), 7000);
 
+        // Opens directly in the customer's WhatsApp chat (Web or Desktop app)
         const waUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(waMessage)}`;
         window.open(waUrl, '_blank');
       }
