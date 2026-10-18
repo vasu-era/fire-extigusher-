@@ -181,7 +181,11 @@ export default function CertificatePage() {
       const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
       // 📱 MOBILE: Use Web Share API — shares PDF directly to WhatsApp
-      const canShareFiles = navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] });
+      const canShareFiles =
+        typeof navigator !== 'undefined' &&
+        'share' in navigator &&
+        'canShare' in navigator &&
+        navigator.canShare({ files: [pdfFile] });
 
       if (canShareFiles) {
         setToast({ type: 'success', message: '📤 Opening share menu — select WhatsApp to send PDF!' });
