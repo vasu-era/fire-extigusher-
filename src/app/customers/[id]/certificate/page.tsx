@@ -52,6 +52,7 @@ export default function CertificatePage() {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [stickerQuantities, setStickerQuantities] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isWhatsAppLoading, setIsWhatsAppLoading] = useState(false);
 
   const fetchCert = useCallback(async () => {
     try {
@@ -139,6 +140,52 @@ export default function CertificatePage() {
     } finally {
       setIsPrinting(false);
       setTimeout(() => setToast(null), 5000);
+    }
+  };
+
+  const handleWhatsApp = async () => {
+    if (!data) return;
+    const { customer } = data;
+
+    // Clean the mobile number — remove spaces, dashes, keep only digits and leading +
+    const rawMobile = (customer.mobile || '').replace(/[\s\-()]/g, '');
+    // Add India country code if not already present
+    const mobile = rawMobile.startsWith('+') ? rawMobile.replace('+', '') : `91${rawMobile}`;
+
+    const message = `Dear ${customer.customer_name}, please find your Fire Extinguisher Service Certificate (${customer.certificate_no}) attached. Thank you for choosing Rakesh Gas Suppliers.`;
+
+    setIsWhatsAppLoading(true);
+    setToast({ type: 'success', message: '📄 Generating PDF, please wait...' });
+
+    try {
+      // Dynamically import html2pdf to avoid SSR issues
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      const element = document.querySelector('.certificate') as HTMLElement;
+      if (!element) throw new Error('Certificate element not found');
+
+      const opt = {
+        margin: 0,
+        filename: `Certificate_${customer.certificate_no || customer.customer_name}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+
+      await html2pdf().set(opt).from(element).save();
+
+      setToast({ type: 'success', message: '✅ PDF downloaded! Now opening WhatsApp — please attach the PDF.' });
+      setTimeout(() => setToast(null), 6000);
+
+      // Open WhatsApp Web with pre-filled message
+      const waUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate PDF';
+      setToast({ type: 'error', message: `WhatsApp Error: ${message}` });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsWhatsAppLoading(false);
     }
   };
 
@@ -386,6 +433,46 @@ export default function CertificatePage() {
             </>
           ) : (
             '🏷️ Print Sticker'
+          )}
+        </button>
+
+        {/* WhatsApp Share Button */}
+        <button
+          onClick={handleWhatsApp}
+          disabled={isWhatsAppLoading}
+          title={`Send certificate to ${data?.customer?.mobile} on WhatsApp`}
+          style={{
+            background: isWhatsAppLoading ? '#86efac' : '#25D366',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            borderRadius: 8,
+            cursor: isWhatsAppLoading ? 'not-allowed' : 'pointer',
+            fontSize: 16,
+            fontWeight: 'bold',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: isWhatsAppLoading ? 'none' : '0 2px 8px rgba(37,211,102,0.35)',
+            transition: 'background 0.2s, box-shadow 0.2s',
+          }}
+        >
+          {isWhatsAppLoading ? (
+            <>
+              <svg style={{ animation: 'spin 1s linear infinite', width: 20, height: 20 }} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ opacity: 0.25 }} />
+                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style={{ opacity: 0.75 }} />
+              </svg>
+              Generating PDF...
+            </>
+          ) : (
+            <>
+              {/* WhatsApp SVG Icon */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Send on WhatsApp
+            </>
           )}
         </button>
       </div>
